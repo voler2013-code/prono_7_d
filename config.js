@@ -34,8 +34,7 @@ window.CONFIG = {
     {
       id: "merlo", nombre: "Merlo", lat: -32.369, lon: -64.947, techoMinHPa: 800,
       viento: [
-        { hPa: 900, max: 14, dirs: "NO ONO O OSO" },
-        { hPa: 850, max: 21, dirs: "N NNO NO ONO O OSO" },
+        { hPa: 850, max: 14, dirs: "NO ONO O OSO" },
         { hPa: 800, max: 21, dirs: "N NNO NO ONO O OSO" },
       ],
     },
