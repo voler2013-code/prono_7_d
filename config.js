@@ -142,8 +142,15 @@ window.CONFIG = {
     emojis: { bien: "👍", medio: "🤏", mal: "👎" },
     emojiBien: 0.9, emojiMedio: 0.5,
 
-    // Térmica: caída del parapente girando en aire en calma (m/s), se resta al ascenso
-    hundimientoParapente: 1.1,
+    // Térmica
+    // "deardorff": según el calor que el sol le da al suelo y la altura de la capa (techo).
+    // "predelli": la fórmula del script original (contraste de rocío).
+    metodoTermica: "deardorff",
+    factorCalorRadiacion: 0.35, // si el modelo no da el calor del suelo: % de la radiación solar
+    factorNucleo: 1.0,          // ascenso máximo del aire = w* × esto (para calibrar)
+    termicaPlenaDesde: 0.1,     // fracción de la capa (suelo→techo) donde la térmica ya es plena...
+    termicaPlenaHasta: 0.8,     // ...y desde donde empieza a apagarse hasta 0 en el techo
+    hundimientoParapente: 1.1,  // caída del parapente girando (m/s), se resta al ascenso
 
     // Resumen
     capeSobredesarrollo: 1000, // J/kg

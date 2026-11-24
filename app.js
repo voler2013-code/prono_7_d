@@ -119,12 +119,32 @@
     }
   }
 
+  // Consulta aparte y chica: calor sensible del suelo y radiación solar (para la térmica).
+  // Si el modelo no tiene alguna variable, se prueba solo con la radiación; si falla, se ignora.
+  function urlExtra(modelo, vars) {
+    const lat = C.lugares.map((l) => l.lat).join(",");
+    const lon = C.lugares.map((l) => l.lon).join(",");
+    return "https://api.open-meteo.com/v1/forecast" +
+      `?latitude=${lat}&longitude=${lon}&hourly=${vars.join(",")}` +
+      `&models=${modelo}&timezone=${encodeURIComponent(TZ)}&forecast_days=${C.dias}`;
+  }
+  async function descargarExtra(modelo) {
+    for (const vars of [["sensible_heat_flux", "shortwave_radiation"], ["shortwave_radiation"]]) {
+      const res = await pedir(urlExtra(modelo, vars));
+      if (res.status === 200 && res.json) return Array.isArray(res.json) ? res.json : [res.json];
+      if (res.status !== 400) return null;
+    }
+    return null;
+  }
+
   async function descargarModelo(modelo, aviso) {
     let reducido = false;
     for (let intento = 0; intento < 4; intento++) {
       const res = await pedir(urlModelo(modelo, reducido));
       if (res.status === 200 && res.json) {
-        return { datos: Array.isArray(res.json) ? res.json : [res.json], reducido };
+        let extra = null;
+        try { extra = await descargarExtra(modelo); } catch (e) { extra = null; }
+        return { datos: Array.isArray(res.json) ? res.json : [res.json], reducido, extra };
       }
       // Variable no disponible en ese modelo → se reintenta con niveles estándar
       if (res.status === 400 && !reducido) { reducido = true; continue; }
@@ -273,6 +293,8 @@
       wd: uv10.length ? r1(deUV(mediana(uv10.map((a) => a[0])), mediana(uv10.map((a) => a[1])))) : null,
       gust: r1(sv("gust")), pp: r1(sv("pp")), cl: r1(sv("cl")), cm: r1(sv("cm")),
       ch: r1(sv("ch")), cape: esNum(sv("cape")) ? Math.round(sv("cape")) : null,
+      rad: esNum(sv("rad")) ? Math.round(sv("rad")) : null,
+      calor: esNum(sv("calor")) ? Math.round(sv("calor")) : null,
     };
 
     // Viento de cada modelo en los niveles configurados (para la confianza)
@@ -296,7 +318,7 @@
     };
     C.lugares.forEach((L, i) => {
       const locs = modelos
-        .map((m) => ({ m, d: ok[m].datos[i] }))
+        .map((m) => ({ m, d: ok[m].datos[i], e: ok[m].extra && ok[m].extra[i] }))
         .filter((x) => x.d && x.d.hourly && Array.isArray(x.d.hourly.time));
       if (!locs.length) return;
       const elev = mediana(locs.map((x) => x.d.elevation));
@@ -304,6 +326,11 @@
       const idx = locs.map((x) => {
         const mp = {};
         x.d.hourly.time.forEach((t, j) => (mp[t] = j));
+        return mp;
+      });
+      const idxE = locs.map((x) => {
+        const mp = {};
+        if (x.e && x.e.hourly && Array.isArray(x.e.hourly.time)) x.e.hourly.time.forEach((t, j) => (mp[t] = j));
         return mp;
       });
       const pp = {};
@@ -325,6 +352,14 @@
           const k = idx[j][t];
           if (k === undefined) return;
           const s = superficieModelo(x.d.hourly, k);
+          const ke = idxE[j][t];
+          if (ke !== undefined) {
+            const he = x.e.hourly;
+            const g = (key) => (he[key] && esNum(he[key][ke]) ? he[key][ke] : null);
+            s.rad = g("shortwave_radiation");
+            s.shf = g("sensible_heat_flux");
+          }
+          s.calor = calorSuelo(s.shf, s.rad);
           if (Object.values(s).some(esNum)) sups.push(s);
           const pr = perfilModelo(x.d.hourly, k);
           if (!pr.some((o) => esNum(o.T))) return;
@@ -418,6 +453,43 @@
     return { z: pts[pts.length - 1].z, dif: null, tipo: "azul" };
   }
 
+  // Calor que el suelo le da al aire (W/m²): el flujo de calor sensible del modelo
+  // si existe y es razonable; si no, una fracción de la radiación solar.
+  function calorSuelo(shf, rad) {
+    const est = esNum(rad) ? Math.max(0, rad) * U.factorCalorRadiacion : null;
+    if (esNum(shf)) {
+      const h = Math.abs(shf); // algunos modelos usan signo negativo para el flujo hacia arriba
+      if (!esNum(rad) || h <= Math.max(0, rad) + 50) return h;
+    }
+    return est;
+  }
+
+  // Térmica de Deardorff: w* = (g/T · calor/(ρ·cp) · altura de la capa)^(1/3).
+  // Por altura (x = fracción de la capa): crece en el primer tramo, es plena en la
+  // parte media (núcleo ≈ w*·factorNucleo) y baja hasta 0 al llegar al techo.
+  // Neto = w − caída del parapente.
+  function termicasDeardorff(H, elev, zTecho) {
+    const out = {};
+    const calor = H.sup.calor, T = H.sup.T;
+    const zi = zTecho - elev;
+    if (!esNum(calor) || !esNum(T) || !(zi > 50)) return null;
+    const TK = T + 273.15;
+    const pres = 101325 * Math.pow(1 - elev / 44330.8, 5.255);
+    const rho = pres / (287 * TK);
+    const wEst = Math.cbrt((9.81 / TK) * (Math.max(0, calor) / (rho * 1005)) * zi);
+    const a = U.termicaPlenaDesde, b = U.termicaPlenaHasta;
+    const forma = (x) => (x < a ? Math.cbrt(x / a) : x <= b ? 1 : Math.max(0, (1 - x) / (1 - b)));
+    C.niveles.forEach((p, k) => {
+      const nm = H.niv[k];
+      if (!nm || !esNum(nm.z) || nm.z <= elev + 10 || nm.z > zTecho + 1) return;
+      const x = (nm.z - elev) / zi;
+      const w = wEst * U.factorNucleo * forma(x);
+      out[p] = w - U.hundimientoParapente;
+    });
+    out._wEst = wEst;
+    return out;
+  }
+
   // Velocidad del aire en la térmica (Predelli), igual que prono_termico3.py
   function velocTermica(rocioTermica, rocio, temp) {
     const dif = rocioTermica - rocio;
@@ -431,6 +503,10 @@
   // por modelo, rocío de la térmica = rocío a 2 m − 1,8 °C/km; se resta el
   // hundimiento del parapente y se toma la mediana de los modelos.
   function termicas(H, elev, zTecho) {
+    if (U.metodoTermica !== "predelli") {
+      const d = termicasDeardorff(H, elev, zTecho);
+      if (d) return d;
+    }
     const out = {};
     if (!H.tm) return out;
     const mods = Object.values(H.tm);
@@ -847,7 +923,7 @@
   // ===================================================================
   // PANTALLA
   // ===================================================================
-  const CLAVE = "pronoTermico:v3";
+  const CLAVE = "pronoTermico:v4";
   const S = { A: null, R: null, tab: "resumen", hora: {}, ampliado: {}, cargando: false, errores: {} };
   const $ = (s) => document.querySelector(s);
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
