@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f5c6e">
+  <title>Prono 7 días</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="top">
+    <h1>Prono 7 días</h1>
+    <div id="estado" class="estado"><div class="prog"><div class="prog-t">Cargando…</div></div></div>
+    <nav id="tabs" class="tabs" aria-label="Días"></nav>
+  </header>
+
+  <main id="vista"></main>
+
+  <footer class="pie">
+    <details class="ayuda">
+      <summary>¿Cómo leer esto?</summary>
+      <div class="ayuda-c">
+        <p><b>El %</b> es la chance de vuelo a las 15 hs. Suma: viento 35, sondeo 20, techo 15, nubes 15 y lluvia 15.
+          Lo que cumple suma completo; lo que no, resta según cuánto se aleja. Una falla grave (viento de atrás o
+          muy fuerte en el despegue, o lluvia fuerte) deja el lugar en 30% como máximo.</p>
+        <p><b>Datos:</b> 7 modelos de Open-Meteo. Para cada altura se usa la mediana; la dirección se promedia
+          como vector (ENE, E y ESE dan E). Las alturas salen de la altura geopotencial del día.</p>
+        <p><b>Pulgares:</b> 👍 cumple, 🤏 cumple a medias, 👎 no cumple.</p>
+        <p><b>Viento:</b> se evalúa en las alturas configuradas de cada lugar, desde el suelo hasta el techo
+          (la más baja pesa el doble). El punto de color en la tabla indica si esa altura cumple.
+          La flecha apunta hacia donde sopla. La racha se muestra solo en el suelo.</p>
+        <p><b>Techo (GFS):</b> subiendo desde el suelo, el primer punto donde el rocío más se acerca a la
+          temperatura y por encima vuelve a aparecer aire seco. Si casi se tocan, es base de cúmulos.
+          Sin ese punto se estima por el aire del suelo subiendo (térmica azul).</p>
+        <p><b>Sondeo:</b> se aprueba o no con GFS, del suelo al techo (👍 aprobado, 🤏 cumple una de sus dos
+          condiciones, 👎 ninguna). Se informa el descenso promedio de temperatura cada 100 m en esa capa (mediana de los modelos).
+          El gráfico usa la mediana de todos los modelos.</p>
+        <p><b>Barra horaria:</b> % de 9 a 18 hs. Tocá una hora para ver la tabla y el sondeo de ese momento.
+          <b>Confianza:</b> cuántos modelos hay y cuánto coinciden en el viento del despegue.</p>
+        <p>Los datos se guardan 2 horas en el teléfono. Datos meteorológicos:
+          <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> (CC BY 4.0).</p>
+      </div>
+    </details>
+  </footer>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
