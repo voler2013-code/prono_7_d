@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0f5c6e">
   <title>Prono 7 días</title>
-  <link rel="stylesheet" href="styles.css?v=1.9">
+  <link rel="stylesheet" href="styles.css?v=1.11">
 </head>
 <body>
   <header class="top">
@@ -20,14 +20,15 @@
     <details class="ayuda">
       <summary>¿Cómo leer esto?</summary>
       <div class="ayuda-c">
-        <p><b>El %</b> es la chance de vuelo a las 15 hs. Suma: viento 35, sondeo 20, techo 15, nubes 15 y lluvia 15.
-          Lo que cumple suma completo; lo que no, resta según cuánto se aleja. Una falla grave (viento de atrás o
-          muy fuerte en el despegue, racha en el suelo de 30 km/h o más, o lluvia fuerte) deja el lugar en 30% como máximo.</p>
+        <p><b>El %</b> (a las 15 hs) = calidad del día × llave de despegue. <b>Calidad:</b> viento en altura 30,
+          sondeo 25, techo 25, nubes 20; lo que no cumple resta según cuánto se aleja. <b>Llave (Despegue y Lluvia):</b>
+          el peor de dirección y velocidad en el despegue, racha en el suelo (menos de 30 km/h) y lluvia de 12 a 18 hs.
+          Si no se puede despegar, el lugar da 0%; si se puede a medias, el % baja en proporción.</p>
         <p><b>Datos:</b> 7 modelos de Open-Meteo. Para cada altura se usa la mediana; la dirección se promedia
           como vector (ENE, E y ESE dan E). Las alturas salen de la altura geopotencial del día.</p>
         <p><b>Pulgares:</b> 👍 cumple, 🤏 cumple a medias, 👎 no cumple.</p>
-        <p><b>Viento:</b> se evalúa en las alturas configuradas de cada lugar, desde el suelo hasta el techo
-          (la más baja pesa el doble), aunque el terreno de las coordenadas quede más alto. En la altura más baja, una dirección fuera de las útiles vale 0; en las de arriba se tolera hasta 2 sectores de más, restando de a poco. El punto de color en la tabla indica si esa altura cumple.
+        <p><b>Viento:</b> se evalúa en las alturas configuradas de cada lugar, desde el suelo hasta el techo.
+          La más baja es el despegue: fuera de las direcciones útiles vale 0, aunque el terreno de las coordenadas quede más alto. En las de arriba se tolera hasta 2 sectores de más, restando de a poco. El punto de color en la tabla indica si esa altura cumple.
           La flecha apunta hacia donde sopla. La racha se muestra solo en el suelo.</p>
         <p><b>Térmica:</b> ascenso neto estimado del parapente (m/s), igual que el script original:
           fórmula de Predelli con el rocío del suelo, menos 1,1 m/s de caída del parapente. Mediana de los
@@ -45,10 +46,10 @@
           <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> (CC BY 4.0).</p>
       </div>
     </details>
-    <div class="version">versión 1.9</div>
+    <div class="version">versión 1.11</div>
   </footer>
 
-  <script src="config.js?v=1.9"></script>
-  <script src="app.js?v=1.9"></script>
+  <script src="config.js?v=1.11"></script>
+  <script src="app.js?v=1.11"></script>
 </body>
 </html>

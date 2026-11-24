@@ -593,13 +593,13 @@
                  fuera, sDir, sVel, s: sDir * sVel, evaluado: true, base: true }];
     }
     const ev = evals.filter((e) => e.evaluado);
-    const pesoTot = ev.reduce((s, e) => s + (e.base ? U.pesoNivelBase : 1), 0);
-    let sViento = pesoTot ? ev.reduce((s, e) => s + e.s * (e.base ? U.pesoNivelBase : 1), 0) / pesoTot : 1;
+    const base = ev.find((e) => e.base) || null;
+    // Viento en altura (calidad): promedio de los niveles evaluados por encima del despegue
+    const arriba = ev.filter((e) => !e.base);
+    const sVientoAltura = arriba.length ? arriba.reduce((s, e) => s + e.s, 0) / arriba.length : 1;
     // Racha en el suelo: debe ser menor que rachaSueloMax en todos los lugares
     const racha = H.sup.gust;
     const rachaFuerte = esNum(racha) && racha >= U.rachaSueloMax;
-    if (rachaFuerte) sViento = 0;
-    const base = ev.find((e) => e.base) || null;
 
     // Nubes
     const cum = techo.tipo === "cumulos";
@@ -620,17 +620,15 @@
     const mm = lluviaVentana(SL, fecha, hora);
     const sLluvia = !esNum(mm) || mm < U.lluviaOk ? 1 : clamp01((U.lluviaCero - mm) / (U.lluviaCero - U.lluviaOk));
 
-    const partes = { viento: sViento, sondeo: sondeo.ok ? 1 : 0, techo: sTecho, nubes: sNubes, lluvia: sLluvia };
+    // % = Calidad del día (suma ponderada) × Llave de despegue (el peor factor)
+    const sDespegue = Math.min(base ? base.sDir : 1, base ? base.sVel : 1, rachaFuerte ? 0 : 1);
+    const llave = Math.min(sDespegue, sLluvia);
+    const calidadPartes = { viento: sVientoAltura, sondeo: sondeo.ok ? 1 : 0, techo: sTecho, nubes: sNubes };
     const P = C.pesos;
     const sumaP = Object.values(P).reduce((s, x) => s + x, 0) || 1;
-    let pct = (100 * Object.keys(P).reduce((s, k) => s + P[k] * (partes[k] ?? 1), 0)) / sumaP;
-    const graves = [];
-    if (base && base.sDir === 0) graves.push("dirección no útil en el despegue");
-    if (base && base.sVel === 0) graves.push("viento fuerte en el despegue");
-    if (esNum(mm) && mm >= U.lluviaCero) graves.push("lluvia fuerte");
-    if (rachaFuerte) graves.push("racha fuerte en el suelo");
-    if (graves.length) pct = Math.min(pct, U.topeFallaGrave);
-    pct = Math.round(pct);
+    const calidad = Object.keys(P).reduce((s, k) => s + P[k] * (calidadPartes[k] ?? 1), 0) / sumaP;
+    const pct = Math.round(100 * calidad * llave);
+    const partes = { despegue: sDespegue, ...calidadPartes, lluvia: sLluvia };
 
     // Razones (lo que no cumple)
     const razones = [];
@@ -659,7 +657,7 @@
     if (sLluvia < 0.999) razones.push(`Lluvia ${hora - 3}–${hora + 3} hs: ${fmt1(mm)} mm`);
 
     return {
-      hora, pct, partes, graves, razones, techo, zMin, sondeo, fuente, pts, evals, base,
+      hora, pct, partes, calidad, llave, razones, techo, zMin, sondeo, fuente, pts, evals, base,
       ptsMed: puntosSondeo(H, elev, true).pts,
       termicas: termicas(H, elev, techo.z),
       mm, H, elev, conf: confianza(H, base, U), cum, ccBajoTecho,
@@ -1005,9 +1003,8 @@
   }
 
   function htmlDetalle(L, a, resumen) {
-    const P = C.pesos;
-    const nombres = { viento: "Viento", sondeo: "Sondeo", techo: "Techo", nubes: "Nubes", lluvia: "Lluvia" };
-    const chips = Object.keys(P).map((k) => {
+    const nombres = { despegue: "Despegue", viento: "Viento", sondeo: "Sondeo", techo: "Techo", nubes: "Nubes", lluvia: "Lluvia" };
+    const chips = Object.keys(nombres).map((k) => {
       const n = k === "sondeo" ? nivelSondeo(a.sondeo) : nivelParte(a.partes[k] ?? 1);
       const h = n === "bien" ? 110 : n === "medio" ? 50 : 5;
       return `<span class="parte" style="--h:${h}">${nombres[k]} <span class="emo">${U.emojis[n]}</span></span>`;
@@ -1029,6 +1026,9 @@
         filas += `<tr class="sep"><td colspan="5">Techo ${fmtTecho(a.techo)}</td></tr>`;
         sepPuesto = true;
       }
+      // Solo pantalla: si redondeada coincide con la del suelo, no se muestra la fila
+      // (los cálculos no cambian)
+      if (Math.round(n.z / 100) === Math.round(a.elev / 100)) return;
       const e = evalPorP[n.p];
       const punto = e && e.evaluado
         ? `<i class="pt" style="--h:${hue(100 * e.s)}" title="${Math.round(100 * e.s)}% · útiles: ${esc(e.dirs)} · máx ${e.max} km/h"></i>` : "";

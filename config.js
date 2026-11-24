@@ -78,8 +78,11 @@ window.CONFIG = {
     },
   ],
 
-  // Pesos del % (suman 100)
-  pesos: { viento: 35, sondeo: 20, techo: 15, nubes: 15, lluvia: 15 },
+  // % = Calidad del día × Llave de despegue
+  // Calidad del día (suma ponderada, suman 100). "viento" = niveles por encima del despegue.
+  // La llave de despegue (0 a 1) es el peor de: dirección y velocidad en el despegue,
+  // racha en el suelo y lluvia 12–18 hs. Si no se puede despegar, el lugar da 0%.
+  pesos: { viento: 30, sondeo: 25, techo: 25, nubes: 20 },
 
   umbrales: {
     // Viento: puntaje completo dentro del sector y hasta "max";
@@ -87,8 +90,7 @@ window.CONFIG = {
     dirGradosCero: 45,         // en altura
     dirGradosCeroBase: 0,      // en el nivel más bajo (despegue): 0 = fuera del sector vale 0
     velFactorCero: 1.5,
-    pesoNivelBase: 2,          // el nivel más bajo sobre el terreno pesa doble
-    rachaSueloMax: 30,         // km/h: racha en el suelo igual o mayor → Viento 0 y tope de %
+    rachaSueloMax: 30,         // km/h: racha en el suelo igual o mayor → llave de despegue 0
 
     // Nubes (% de cobertura). Pesos internos dentro del parámetro nubes.
     nubesBajas: 60, nubesMedias: 70, nubesAltas: 80,
@@ -126,9 +128,6 @@ window.CONFIG = {
 
     // Térmica: caída del parapente girando en aire en calma (m/s), se resta al ascenso
     hundimientoParapente: 1.1,
-
-    // Tope de % ante fallas graves
-    topeFallaGrave: 30,
 
     // Resumen
     capeSobredesarrollo: 1000, // J/kg
