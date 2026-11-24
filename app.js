@@ -567,7 +567,9 @@
     // Viento en los niveles configurados (sobre el terreno y hasta el techo)
     const cfgs = L.viento
       .map((cfg) => ({ cfg, n: nivelP(H, cfg.hPa) }))
-      .filter((x) => x.n && esNum(x.n.z) && x.n.z > elev + 10 && esNum(x.n.ws))
+      // Los niveles configurados se evalúan siempre, aunque el terreno de las
+      // coordenadas quede por encima (la presión manda, como en la configuración)
+      .filter((x) => x.n && esNum(x.n.z) && esNum(x.n.ws))
       .sort((a, b) => a.n.z - b.n.z);
     let evals = [];
     cfgs.forEach((x, i) => {
@@ -1006,7 +1008,10 @@
     // Tabla: niveles sobre el terreno hasta el techo + uno por encima
     const evalPorP = {};
     a.evals.forEach((e) => { if (e.p) evalPorP[e.p] = e; });
-    const sobre = a.H.niv.filter((n) => esNum(n.z) && n.z > a.elev + 50).sort((x, y) => x.z - y.z);
+    const sobre = a.H.niv.filter((n) => esNum(n.z) && (n.z > a.elev + 50 || (evalPorP[n.p] && evalPorP[n.p].evaluado)))
+      .sort((x, y) => x.z - y.z);
+    const bajoTerreno = a.base && a.base.p && a.base.z <= a.elev + 10
+      ? `<p class="nota-terreno">El terreno en estas coordenadas (${fmtM(a.elev)}) está por encima de la altura de despegue configurada (${fmtM(a.base.z)}); igual se evalúa esa altura.</p>` : "";
     const i0 = sobre.findIndex((n) => n.z > a.techo.z + 1);
     const vis = (i0 < 0 ? sobre : sobre.slice(0, i0 + 1)).reverse();
     let filas = "", sepPuesto = false;
@@ -1037,7 +1042,7 @@
 
     return `<div class="det">${nota}<div class="partes">${chips}</div>
       <table class="perfil"><thead><tr><th>Altura</th><th>Viento</th><th>Temp</th><th>Dir</th><th class="term">Térmica<small>m/s</small></th></tr></thead><tbody>${filas}</tbody></table>
-      <p class="resumen">${resumen.map(([b, r]) => `<b>${esc(b)}</b>${esc(r)}`).join(" ")}</p>
+      ${bajoTerreno}<p class="resumen">${resumen.map(([b, r]) => `<b>${esc(b)}</b>${esc(r)}`).join(" ")}</p>
       <div class="sondeo"><div class="sondeo-t">Sondeo ${a.hora} hs <span class="emo">${U.emojis[nivelSondeo(sd)]}</span> ${txtSondeo}</div>
       ${svgSondeo(a)}
       <div class="leyenda"><span class="lt">— temperatura</span><span class="ltd">— rocío</span><span class="lpa">··· aire del suelo subiendo</span><span>mediana de ${a.H.nm} modelos</span></div></div></div>`;
