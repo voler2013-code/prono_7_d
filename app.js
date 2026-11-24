@@ -981,7 +981,7 @@
     const head = `<header class="card-h">
       <div class="pct" style="--h:${hue(a15.pct)}">${a15.pct}<small>%</small></div>
       <div class="card-t"><h3>${esc(L.nombre)}</h3>
-        <div class="sub">Techo ${fmtTecho(a15.techo)} · confianza ${a15.conf.nivel} · ${a15.conf.n} modelos</div></div></header>`;
+        <span class="sub">Techo ${fmtTecho(a15.techo)} · confianza ${a15.conf.nivel} · ${a15.conf.n} modelos</span></div></header>`;
 
     if (plegado) {
       const raz = a15.razones.length ? a15.razones : ["Suma de parámetros parciales por debajo del 50%"];
@@ -1041,27 +1041,27 @@
     if (!sepPuesto) filas += `<tr class="sep"><td colspan="5">Techo ${fmtTecho(a.techo)}</td></tr>`;
     const s = a.H.sup;
     filas += `<tr class="suelo"><td>${fmtM(a.elev)} <span class="tag">suelo</span></td>
-      <td>${esNum(s.ws) ? Math.round(s.ws) : "—"} <small>km/h</small>${esNum(s.gust) ? `<small class="racha">racha ${Math.round(s.gust)}</small>` : ""}</td>
+      <td>${esNum(s.ws) ? Math.round(s.ws) : "—"} <small>km/h</small>${esNum(s.gust) ? ` <small class="racha">r ${Math.round(s.gust)}</small>` : ""}</td>
       <td>${esNum(s.T) ? Math.round(s.T) + "°" : "—"}</td><td><span class="dir">${flecha(s.wd)}${dirLabel(s.wd)}</span></td><td></td></tr>`;
 
     const sd = a.sondeo;
     const txtSondeo = esNum(sd.descenso)
-      ? `Descenso prom. temp. capa útil: ${fmt1(-sd.descenso / 10)} °C/100 m`
+      ? `Descenso prom. temp. capa útil: <span class="nw">${fmt1(-sd.descenso / 10)} °C/100 m</span>`
       : sd.motivo || "sin datos";
 
     return `<div class="det">${nota}<div class="partes">${chips}</div>
-      <table class="perfil"><thead><tr><th>Altura</th><th>Viento</th><th>Temp</th><th>Dir</th><th class="term">Térmica<small>m/s</small></th></tr></thead><tbody>${filas}</tbody></table>
+      <table class="perfil"><thead><tr><th>Altura</th><th>Viento</th><th>Temp</th><th>Dir</th><th class="term">Térmica <small>m/s</small></th></tr></thead><tbody>${filas}</tbody></table>
       ${bajoTerreno}<p class="resumen">${resumen.map(([b, r]) => `<b>${esc(b)}</b>${esc(r)}`).join(" ")}</p>
       <div class="sondeo"><div class="sondeo-t">Sondeo ${a.hora} hs <span class="emo">${U.emojis[nivelSondeo(sd)]}</span> ${txtSondeo}</div>
       ${svgSondeo(a)}
-      <div class="leyenda"><span class="lt">— temperatura</span><span class="ltd">— rocío</span><span class="lpa">··· aire del suelo subiendo</span><span>mediana de ${a.H.nm} modelos</span></div></div></div>`;
+      <div class="leyenda"><span class="lt">— temperatura</span><span class="ltd">— rocío</span><span class="lpa">··· aire del suelo subiendo</span></div></div></div>`;
   }
 
   // Sondeo inclinado (estilo skew-T simple, sin logaritmos)
   function svgSondeo(a) {
     const pts = a.ptsMed;
     if (pts.length < 2) return "";
-    const W = 340, Hh = 300, ml = 40, mr = 8, mt = 8, mb = 22;
+    const W = 340, Hh = 190, ml = 36, mr = 6, mt = 6, mb = 16;
     const z0 = Math.floor(a.elev / 500) * 500, z1 = 5500;
     const SK = 8; // °C de inclinación por km
     const xv = (T, z) => T + (SK * (z - z0)) / 1000;
@@ -1080,7 +1080,7 @@
       const xa = X(T, z0), xb = X(T, z1);
       if (xb < ml && xa < ml) continue;
       g += `<line x1="${xa}" y1="${Y(z0)}" x2="${xb}" y2="${Y(z1)}" class="iso"/>`;
-      if (xa >= ml && xa <= W - mr) txt += `<text x="${xa}" y="${Hh - 6}" class="ax" text-anchor="middle">${T}°</text>`;
+      if (xa >= ml && xa <= W - mr) txt += `<text x="${xa}" y="${Hh - 4}" class="ax" text-anchor="middle">${T}°</text>`;
     }
     const linea = (k, cls) => `<polyline class="${cls}" points="${vis.map((p) => `${X(p[k], p.z).toFixed(1)},${Y(p.z).toFixed(1)}`).join(" ")}"/>`;
     const T0 = pts[0].T, zs = pts[0].z;
@@ -1093,7 +1093,7 @@
     return `<svg class="svg-sondeo" viewBox="0 0 ${W} ${Hh}" role="img" aria-label="Sondeo">
       <defs><clipPath id="cl"><rect x="${ml}" y="${mt}" width="${W - ml - mr}" height="${Hh - mt - mb}"/></clipPath></defs>
       <g clip-path="url(#cl)">${g}${suelo}${parcela}${linea("Td", "ltd")}${linea("T", "lt")}</g>
-      ${txt}<text x="${ml}" y="${mt + 9}" class="ax">m</text></svg>`;
+      ${txt}<text x="${ml + 3}" y="${mt + 9}" class="ax">m</text><text x="${W - mr - 3}" y="${mt + 9}" class="ax" text-anchor="end">mediana de ${a.H.nm} modelos</text></svg>`;
   }
 
   // ---------- Eventos ----------
