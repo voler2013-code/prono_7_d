@@ -487,6 +487,9 @@
       out[p] = w - U.hundimientoParapente;
     });
     out._wEst = wEst;
+    // Altura volable: donde la térmica (aire) baja del umbral, en el tramo que se apaga
+    const wp = wEst * U.factorNucleo, um = U.alturaVolableUmbral;
+    out._zVol = wp >= um ? elev + zi * (1 - ((1 - b) * um) / wp) : null;
     return out;
   }
 
@@ -645,7 +648,22 @@
     return c.length === 3 ? c[1] : c[0];
   }
 
+  // Altura volable con la fórmula alternativa (sin _zVol): la altura más alta,
+  // subiendo desde el suelo sin cortes, donde la térmica del aire supera el umbral
+  function alturaVolable(term, H, elev) {
+    if (term && "_zVol" in term) return term._zVol;
+    const niv = C.niveles.map((p, k) => ({ p, z: H.niv[k] && H.niv[k].z }))
+      .filter((n) => esNum(n.z) && esNum(term[n.p])).sort((x, y) => x.z - y.z);
+    let ultimo = null;
+    for (const n of niv) {
+      if (term[n.p] + U.hundimientoParapente >= U.alturaVolableUmbral) ultimo = n.z;
+      else if (ultimo !== null) break;
+    }
+    return ultimo;
+  }
+
   function analizarHora(L, A, fecha, hora) {
+    let term;
     const SL = A.lugares[L.id];
     if (!SL) return null;
     const H = SL.horas[`${fecha}T${pad(hora)}`];
@@ -742,7 +760,7 @@
         ? `Sondeo no aprobado (descenso prom. temp. capa útil: ${fmt1(-sondeo.descenso / 10)} °C/100 m)`
         : `Sondeo no aprobado: ${sondeo.motivo || "sin datos"}`);
     }
-    if (sTecho < 0.999) razones.push(`Techo ${fmtTecho(techo)}, por debajo del mínimo de ${fmtM(zMin)}`);
+    if (sTecho < 0.999) razones.push(`${etiquetaTecho(techo)} ${fmtTecho(techo)}, por debajo del mínimo de ${fmtM(zMin)}`);
     if (sBaja < 0.999) {
       razones.push(cum && esNum(ccBajoTecho) && ccBajoTecho > U.nubesBajas
         ? `Nubes por debajo del techo: ${Math.round(ccBajoTecho)}%`
@@ -756,7 +774,8 @@
     return {
       hora, pct, partes, calidad, llave, razones, techo, zMin, sondeo, fuente, pts, evals, base,
       ptsMed: puntosSondeo(H, elev, true).pts,
-      termicas: termicas(H, elev, techo.z),
+      termicas: (term = termicas(H, elev, techo.z)),
+      zVol: alturaVolable(term, H, elev),
       mm, H, elev, conf: confianza(H, base, U), cum, ccBajoTecho,
     };
   }
@@ -812,7 +831,8 @@
       const baja = hs.filter((h) => h > C.horaRef).map((h) => an[h]).find((a) => a.techo.z < ref.techo.z - 300);
       if (baja) t += `; baja a ${fmtM(baja.techo.z)} a las ${baja.hora} hs`;
     }
-    F.push(["Techo", t + "."]);
+    F.push([etiquetaTecho(ref.techo), t + "."]);
+    F.push(["Altura volable", `: ${fmtVolable(ref.zVol)}.`]);
 
     // Ventana volable
     const vol = hs.filter((h) => an[h].pct >= 50);
@@ -900,9 +920,11 @@
   function fmt1(x) { return esNum(x) ? nf1.format(x) : "—"; }
   function fmtM(z) { return esNum(z) ? `${nf0.format(Math.round(z / 100) * 100)} m` : "—"; }
   function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+  const etiquetaTecho = (t) => (t.tipo === "cumulos" ? "Base nube" : "Techo");
+  const fmtVolable = (z) => (esNum(z) ? fmtM(z) : "sin térmica útil");
   function fmtTecho(t) {
     switch (t.tipo) {
-      case "cumulos": return `${fmtM(t.z)} (base de cúmulos)`;
+      case "cumulos": return fmtM(t.z);
       case "validado": return fmtM(t.z);
       case "humedo": return `${fmtM(U.techoBuscarHasta)} o más (aire húmedo en altura)`;
       case "azul": return `${fmtM(t.z)} (térmica azul)`;
@@ -1079,7 +1101,7 @@
     const head = `<header class="card-h">
       <div class="pct" style="--h:${hue(a15.pct)}">${a15.pct}<small>%</small></div>
       <div class="card-t"><h3>${esc(L.nombre)}</h3>
-        <span class="sub">Techo ${fmtTecho(a15.techo)} · confianza ${a15.conf.nivel} · ${a15.conf.n} modelos</span></div></header>`;
+        <span class="sub">${etiquetaTecho(a15.techo)}: ${fmtTecho(a15.techo)} · Altura volable: ${fmtVolable(a15.zVol)} · confianza ${a15.conf.nivel} · ${a15.conf.n} modelos</span></div></header>`;
 
     if (plegado) {
       const raz = a15.razones.length ? a15.razones : ["Suma de parámetros parciales por debajo del 50%"];
@@ -1094,6 +1116,9 @@
       ${a15.pct < 50 ? `<button class="btn-sec ancho" data-act="plegar" data-k="${k}">Ocultar detalle</button>` : ""}
     </section>`;
   }
+
+  // La tabla muestra la velocidad del aire (como SkySight) o el ascenso neto del parapente
+  const valorTermica = (neta) => (U.termicaMostrar === "neta" ? neta : Math.max(0, neta + U.hundimientoParapente));
 
   function flecha(wd) {
     if (!esNum(wd)) return "";
@@ -1121,7 +1146,7 @@
     let filas = "", sepPuesto = false;
     vis.forEach((n) => {
       if (!sepPuesto && n.z <= a.techo.z + 1) {
-        filas += `<tr class="sep"><td colspan="5">Techo ${fmtTecho(a.techo)}</td></tr>`;
+        filas += `<tr class="sep"><td colspan="5">${etiquetaTecho(a.techo)}: ${fmtTecho(a.techo)} · Altura volable: ${fmtVolable(a.zVol)}</td></tr>`;
         sepPuesto = true;
       }
       // Solo pantalla: si redondeada coincide con la del suelo, no se muestra la fila
@@ -1134,9 +1159,9 @@
         <td>${esNum(n.ws) ? Math.round(n.ws) : "—"} <small>km/h</small></td>
         <td>${esNum(n.T) ? Math.round(n.T) + "°" : "—"}</td>
         <td><span class="dir">${flecha(n.wd)}${dirLabel(n.wd)}</span></td>
-        <td class="term">${esNum(a.termicas[n.p]) ? fmt1(Math.round(a.termicas[n.p] * 10) / 10 || 0) : ""}</td></tr>`;
+        <td class="term">${esNum(a.termicas[n.p]) ? fmt1(Math.round(valorTermica(a.termicas[n.p]) * 10) / 10 || 0) : ""}</td></tr>`;
     });
-    if (!sepPuesto) filas += `<tr class="sep"><td colspan="5">Techo ${fmtTecho(a.techo)}</td></tr>`;
+    if (!sepPuesto) filas += `<tr class="sep"><td colspan="5">${etiquetaTecho(a.techo)}: ${fmtTecho(a.techo)} · Altura volable: ${fmtVolable(a.zVol)}</td></tr>`;
     const s = a.H.sup;
     filas += `<tr class="suelo"><td>${fmtM(a.elev)} <span class="tag">suelo</span></td>
       <td>${esNum(s.ws) ? Math.round(s.ws) : "—"} <small>km/h</small>${esNum(s.gust) ? ` <small class="racha">r ${Math.round(s.gust)}</small>` : ""}</td>

@@ -147,7 +147,9 @@ window.CONFIG = {
     // "predelli": la fórmula del script original (contraste de rocío).
     metodoTermica: "deardorff",
     factorCalorRadiacion: 0.35, // si el modelo no da el calor del suelo: % de la radiación solar
-    factorNucleo: 1.0,          // ascenso máximo del aire = w* × esto (para calibrar)
+    factorNucleo: 0.9,          // ascenso máximo del aire = w* × esto (calibrado con SkySight)
+    termicaMostrar: "aire",     // "aire": velocidad del aire (como SkySight) · "neta": menos la caída del parapente
+    alturaVolableUmbral: 0.9,   // m/s de aire: altura volable = donde la térmica baja de esto (como SkySight)
     termicaPlenaDesde: 0.1,     // fracción de la capa (suelo→techo) donde la térmica ya es plena...
     termicaPlenaHasta: 0.8,     // ...y desde donde empieza a apagarse hasta 0 en el techo
     hundimientoParapente: 1.1,  // caída del parapente girando (m/s), se resta al ascenso

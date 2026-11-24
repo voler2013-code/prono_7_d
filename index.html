@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0f5c6e">
   <title>Prono 7 días</title>
-  <link rel="stylesheet" href="styles.css?v=1.14">
+  <link rel="stylesheet" href="styles.css?v=1.15">
 </head>
 <body>
   <header class="top">
@@ -30,9 +30,11 @@
         <p><b>Viento:</b> se evalúa en las alturas configuradas de cada lugar, desde el suelo hasta el techo.
           La más baja es el despegue: fuera de las direcciones útiles vale 0, aunque el terreno de las coordenadas quede más alto. En las de arriba se tolera hasta 2 sectores de más, restando de a poco. El punto de color en la tabla indica si esa altura cumple.
           La flecha apunta hacia donde sopla. La racha se muestra solo en el suelo.</p>
-        <p><b>Térmica:</b> ascenso neto estimado del parapente (m/s), ya restada la caída de 1,1 m/s. Sale del
-          calor que el sol le da al suelo (mediana de los modelos) y de la altura de la capa hasta el techo: es más
-          fuerte con sol pleno y techo alto, y se apaga cerca del techo. Un valor negativo indica que ahí no se sube.</p>
+        <p><b>Térmica:</b> velocidad del aire en la térmica (m/s), como SkySight; el parapente sube alrededor de
+          1,1 m/s menos. Sale del calor que el sol le da al suelo (mediana de los modelos) y de la altura de la capa:
+          es más fuerte con sol pleno y techo alto, y se apaga cerca del techo.</p>
+        <p><b>Base nube / Techo:</b> si hay cúmulos se muestra la base de nube; si no, el techo de la térmica azul.
+          <b>Altura volable:</b> hasta donde la térmica supera 0,9 m/s (criterio de SkySight).</p>
         <p><b>Techo:</b> con la mediana de los modelos se calculan dos alturas: hasta dónde sube el aire
           del suelo antes de quedar más frío que el entorno (tope térmico) y la base de los cúmulos (125 m por
           cada grado de diferencia entre temperatura y rocío en el suelo). El techo es la más baja; si son
@@ -47,10 +49,10 @@
           <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> (CC BY 4.0).</p>
       </div>
     </details>
-    <div class="version">versión 1.14</div>
+    <div class="version">versión 1.15</div>
   </footer>
 
-  <script src="config.js?v=1.14"></script>
-  <script src="app.js?v=1.14"></script>
+  <script src="config.js?v=1.15"></script>
+  <script src="app.js?v=1.15"></script>
 </body>
 </html>
