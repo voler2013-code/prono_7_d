@@ -216,3 +216,7 @@ main { padding: 8px; }
 .parte { font-size: 10px; padding: 1px 3px; white-space: nowrap; text-align: center; }
 .parte .emo { font-size: 10.5px; }
 @media (max-width: 380px) { .parte { font-size: 9px; padding: 1px 2px; } .parte .emo { font-size: 9.5px; } }
+.listo span { font-size: 12.5px; }
+/* Botón Actualizar en la fila del título: la línea de datos usa todo el ancho */
+.listo .btn-sec { position: absolute; top: max(8px, env(safe-area-inset-top)); right: 12px; }
+.listo { display: block; }

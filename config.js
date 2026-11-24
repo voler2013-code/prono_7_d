@@ -30,6 +30,22 @@ window.CONFIG = {
   horaFin: 18,
   cacheMinutos: 120,
 
+  // Próxima actualización recomendada (metadatos de Open-Meteo, no cuentan para el límite)
+  proximaActualizacion: {
+    url: "https://api.open-meteo.com/data/{dominio}/static/meta.json",
+    dominios: {
+      icon_seamless: "dwd_icon",
+      gfs_seamless: "ncep_gfs025",
+      meteofrance_seamless: "meteofrance_arpege_world025",
+      ecmwf_ifs025: "ecmwf_ifs025",
+      ukmo_seamless: "ukmo_global_deterministic_10km",
+      gem_seamless: "cmc_gem_gdps",
+      cma_grapes_global: "cma_grapes_global",
+    },
+    minModelos: 5,   // de 7: horario en que ya se actualizó la mayoría
+    margenMin: 10,   // Open-Meteo recomienda esperar 10 min tras la disponibilidad
+  },
+
   lugares: [
     {
       id: "merlo", nombre: "Merlo", lat: -32.369, lon: -64.947, techoMinHPa: 800,

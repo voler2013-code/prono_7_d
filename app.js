@@ -163,6 +163,27 @@
     return { ok, err };
   }
 
+  // Próxima actualización recomendada: para cada modelo, última disponibilidad
+  // + intervalo entre corridas + margen; se elige el horario en que ya se
+  // actualizó la mayoría (por defecto 5 de 7). Devuelve ms o null.
+  async function proximaActualizacion() {
+    const P = C.proximaActualizacion;
+    if (!P) return null;
+    const ahora = Date.now() / 1000, margen = (P.margenMin || 0) * 60;
+    const ts = (await Promise.all(C.modelos.map(async (m) => {
+      const d = P.dominios[m];
+      if (!d) return null;
+      const r = await pedir(P.url.replace("{dominio}", d));
+      const j = r.status === 200 ? r.json : null;
+      if (!j || !esNum(j.last_run_availability_time) || !esNum(j.update_interval_seconds)) return null;
+      const t = j.last_run_availability_time + j.update_interval_seconds + margen;
+      return t < ahora ? ahora + margen : t; // modelo demorado: puede salir en cualquier momento
+    }))).filter(esNum).sort((a, b) => a - b);
+    if (!ts.length) return null;
+    const k = Math.min(ts.length, Math.max(1, Math.ceil((ts.length * P.minModelos) / C.modelos.length)));
+    return Math.round(ts[k - 1] * 1000);
+  }
+
   // -------------------------------------------------------------------
   // Procesamiento: perfil por modelo → interpolación → medianas
   // -------------------------------------------------------------------
@@ -877,11 +898,11 @@
   }
   function htmlEstadoListo() {
     const A = S.A;
-    const hora = new Date(A.creado).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: TZ });
+    const hhmm = (t) => new Date(t).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: TZ });
     const errs = Object.keys(S.errores || {});
-    const ok = A.modelos.length;
     const viejo = Date.now() - A.creado > C.cacheMinutos * 60000;
-    return `<div class="listo"><span>Datos de las ${hora}${viejo ? " (viejos)" : ""} · ${ok}/${C.modelos.length} modelos</span>
+    const prox = A.proxima ? ` · Próx. actual. recom.: ${hhmm(A.proxima)}hs` : "";
+    return `<div class="listo"><span>Datos de ${hhmm(A.creado)}hs${viejo ? " (viejos)" : ""}${prox}</span>
       <button class="btn-sec" data-act="actualizar" ${S.cargando ? "disabled" : ""}>Actualizar</button></div>
       ${errs.length ? `<div class="errs">Sin datos de ${errs.map((m) => `${NOMBRE_MODELO[m] || m} (${esc(S.errores[m])})`).join(", ")}.</div>` : ""}
       ${!A.modelos.includes(C.modeloSondeo) ? `<div class="errs">GFS no respondió: el techo y el sondeo usan la mediana de los demás modelos.</div>` : ""}`;
@@ -904,6 +925,7 @@
         return;
       }
       S.A = procesar(ok);
+      try { S.A.proxima = await proximaActualizacion(); } catch (e) { S.A.proxima = null; }
       S.errores = err;
       S.R = analizarTodo(S.A);
       guardarCache(S.A, err);
