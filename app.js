@@ -429,6 +429,12 @@
   function gradosFuera(wd, centros) {
     return Math.min(...centros.map((c) => Math.max(0, angDiff(wd, c) - 11.25)));
   }
+  // Puntaje de dirección: 1 dentro del sector; fuera baja lineal hasta 0 en "gCero" grados.
+  // Con gCero = 0, cualquier dirección fuera del sector vale 0.
+  function puntajeDir(fuera, gCero) {
+    if (fuera <= 0) return 1;
+    return gCero > 0 ? clamp01(1 - fuera / gCero) : 0;
+  }
   function puntajeCapa(cc, umbral) {
     if (!esNum(cc) || cc <= umbral) return 1;
     return clamp01((100 - cc) / (100 - umbral));
@@ -474,7 +480,7 @@
     cfgs.forEach((x, i) => {
       const evaluado = i === 0 || x.n.z <= techo.z;
       const fuera = esNum(x.n.wd) ? gradosFuera(x.n.wd, dirsDe(x.cfg)) : 0;
-      const sDir = clamp01(1 - fuera / U.dirGradosCero);
+      const sDir = puntajeDir(fuera, i === 0 ? U.dirGradosCeroBase : U.dirGradosCero);
       const max = x.cfg.max;
       const sVel = x.n.ws <= max ? 1 : clamp01(1 - (x.n.ws - max) / ((U.velFactorCero - 1) * max));
       evals.push({
@@ -486,7 +492,7 @@
       // Todos los niveles quedaron bajo el terreno: se usa el viento a 10 m
       const cfg = L.viento[0];
       const fuera = esNum(H.sup.wd) ? gradosFuera(H.sup.wd, dirsDe(cfg)) : 0;
-      const sDir = clamp01(1 - fuera / U.dirGradosCero);
+      const sDir = puntajeDir(fuera, U.dirGradosCeroBase);
       const sVel = H.sup.ws <= cfg.max ? 1 : clamp01(1 - (H.sup.ws - cfg.max) / ((U.velFactorCero - 1) * cfg.max));
       evals = [{ p: null, z: elev, ws: H.sup.ws, wd: H.sup.wd, max: cfg.max, dirs: cfg.dirs,
                  fuera, sDir, sVel, s: sDir * sVel, evaluado: true, base: true }];

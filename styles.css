@@ -168,3 +168,4 @@ main { max-width: 720px; margin: 0 auto; padding: 12px; }
 
 .emo { font-size: 14px; line-height: 1; }
 .resumen b { font-weight: 700; }
+.version { text-align: center; font-size: 11px; color: var(--tx2); opacity: .7; margin-top: 6px; }

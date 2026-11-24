@@ -85,7 +85,8 @@ window.CONFIG = {
   umbrales: {
     // Viento: puntaje completo dentro del sector y hasta "max";
     // llega a 0 a estos grados fuera del sector / a este múltiplo de "max".
-    dirGradosCero: 45,
+    dirGradosCero: 45,         // en altura
+    dirGradosCeroBase: 0,      // en el nivel más bajo (despegue): 0 = fuera del sector vale 0
     velFactorCero: 1.5,
     pesoNivelBase: 2,          // el nivel más bajo sobre el terreno pesa doble
 
