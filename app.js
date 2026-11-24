@@ -594,7 +594,11 @@
     }
     const ev = evals.filter((e) => e.evaluado);
     const pesoTot = ev.reduce((s, e) => s + (e.base ? U.pesoNivelBase : 1), 0);
-    const sViento = pesoTot ? ev.reduce((s, e) => s + e.s * (e.base ? U.pesoNivelBase : 1), 0) / pesoTot : 1;
+    let sViento = pesoTot ? ev.reduce((s, e) => s + e.s * (e.base ? U.pesoNivelBase : 1), 0) / pesoTot : 1;
+    // Racha en el suelo: debe ser menor que rachaSueloMax en todos los lugares
+    const racha = H.sup.gust;
+    const rachaFuerte = esNum(racha) && racha >= U.rachaSueloMax;
+    if (rachaFuerte) sViento = 0;
     const base = ev.find((e) => e.base) || null;
 
     // Nubes
@@ -624,6 +628,7 @@
     if (base && base.sDir === 0) graves.push("dirección no útil en el despegue");
     if (base && base.sVel === 0) graves.push("viento fuerte en el despegue");
     if (esNum(mm) && mm >= U.lluviaCero) graves.push("lluvia fuerte");
+    if (rachaFuerte) graves.push("racha fuerte en el suelo");
     if (graves.length) pct = Math.min(pct, U.topeFallaGrave);
     pct = Math.round(pct);
 
@@ -650,6 +655,7 @@
     }
     if (sMed < 0.999) razones.push(`Nubes medias: ${Math.round(H.sup.cm)}%`);
     if (sAlt < 0.999) razones.push(`Nubes altas: ${Math.round(H.sup.ch)}%`);
+    if (rachaFuerte) razones.push(`Racha en el suelo: ${Math.round(racha)} km/h (debe ser menor a ${U.rachaSueloMax})`);
     if (sLluvia < 0.999) razones.push(`Lluvia ${hora - 3}–${hora + 3} hs: ${fmt1(mm)} mm`);
 
     return {
@@ -715,7 +721,7 @@
 
     // Ventana volable
     const vol = hs.filter((h) => an[h].pct >= 50);
-    F.push(vol.length ? ["Ventana volable", `: ${rangos(vol).join(", ")}.`] : ["Sin ventana volable", ": ningún horario supera el 50%."]);
+    F.push(vol.length ? ["Ventana volable", `: ${rangos(vol).join(", ")}.`] : ["Sin ventana volable", "."]);
 
     // Viento en el despegue
     const despegue = (a) => a.base;
@@ -768,7 +774,10 @@
     if (hs2 !== undefined) F.push(["Sobredesarrollo", `: riesgo desde las ${hs2} hs (CAPE ${an[hs2].H.sup.cape} J/kg).`]);
 
     // Racha en el suelo
-    if (esNum(ref.H.sup.gust)) F.push(["Racha", ` en el suelo a las ${C.horaRef} hs: ${Math.round(ref.H.sup.gust)} km/h.`]);
+    if (esNum(ref.H.sup.gust)) {
+      const g = Math.round(ref.H.sup.gust);
+      F.push(["Racha", ` en el suelo a las ${C.horaRef} hs: ${g} km/h${ref.H.sup.gust >= U.rachaSueloMax ? ` (supera ${U.rachaSueloMax})` : ""}.`]);
+    }
     return F;
   }
 
@@ -1011,7 +1020,7 @@
     const sobre = a.H.niv.filter((n) => esNum(n.z) && (n.z > a.elev + 50 || (evalPorP[n.p] && evalPorP[n.p].evaluado)))
       .sort((x, y) => x.z - y.z);
     const bajoTerreno = a.base && a.base.p && a.base.z <= a.elev + 10
-      ? `<p class="nota-terreno">El terreno en estas coordenadas (${fmtM(a.elev)}) está por encima de la altura de despegue configurada (${fmtM(a.base.z)}); igual se evalúa esa altura.</p>` : "";
+      ? `<p class="nota-terreno">Terreno ${fmtM(a.elev)} > despegue ${fmtM(a.base.z)}</p>` : "";
     const i0 = sobre.findIndex((n) => n.z > a.techo.z + 1);
     const vis = (i0 < 0 ? sobre : sobre.slice(0, i0 + 1)).reverse();
     let filas = "", sepPuesto = false;

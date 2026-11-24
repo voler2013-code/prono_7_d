@@ -46,7 +46,7 @@ window.CONFIG = {
       ],
     },
     {
-      id: "pedernera", nombre: "Pedernera", lat: -31.616, lon: -64.686, techoMinHPa: 800,
+      id: "pedernera", nombre: "Pedernera", lat: -31.606, lon: -64.687, techoMinHPa: 800,
       viento: [
         { hPa: 850, max: 19, dirs: "ENE E ESE SE" },
         { hPa: 800, max: 18, dirs: "NNE NE ENE E ESE SE SSE" },
@@ -88,6 +88,7 @@ window.CONFIG = {
     dirGradosCeroBase: 0,      // en el nivel más bajo (despegue): 0 = fuera del sector vale 0
     velFactorCero: 1.5,
     pesoNivelBase: 2,          // el nivel más bajo sobre el terreno pesa doble
+    rachaSueloMax: 30,         // km/h: racha en el suelo igual o mayor → Viento 0 y tope de %
 
     // Nubes (% de cobertura). Pesos internos dentro del parámetro nubes.
     nubesBajas: 60, nubesMedias: 70, nubesAltas: 80,
