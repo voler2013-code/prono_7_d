@@ -310,7 +310,8 @@
           perfiles.push({ m: x.m, niv: pr });
           tm[x.m] = {
             s: r1(s.T),
-            n: pr.filter((o) => esNum(o.z) && esNum(o.T)).map((o) => [Math.round(o.z), r1(o.T)]),
+            sd: r1(rocio(s.T, s.RH)),
+            n: pr.map((o) => (esNum(o.z) && esNum(o.T) ? [Math.round(o.z), r1(o.T), r1(o.Td)] : null)),
           };
           if (x.m === C.modeloSondeo) {
             gfs = {
@@ -396,11 +397,47 @@
     return { z: pts[pts.length - 1].z, dif: null, tipo: "azul" };
   }
 
+  // Velocidad del aire en la térmica (Predelli), igual que prono_termico3.py
+  function velocTermica(rocioTermica, rocio, temp) {
+    const dif = rocioTermica - rocio;
+    if (dif <= 0) return 0;
+    const den = Math.pow(1.1, temp - rocio);
+    if (!(den > 0)) return null;
+    return 5.6 * Math.sqrt((Math.pow(1.1, dif) - 1) / den);
+  }
+
+  // Ascenso NETO del parapente (m/s) por nivel, hasta el techo inclusive:
+  // por modelo, rocío de la térmica = rocío a 2 m − 1,8 °C/km; se resta el
+  // hundimiento del parapente y se toma la mediana de los modelos.
+  function termicas(H, elev, zTecho) {
+    const out = {};
+    if (!H.tm) return out;
+    const mods = Object.values(H.tm);
+    C.niveles.forEach((p, k) => {
+      const nm = H.niv[k];
+      if (!nm || !esNum(nm.z) || nm.z <= elev + 10 || nm.z > zTecho + 1) return;
+      const vals = [];
+      mods.forEach((t) => {
+        const e = t.n[k];
+        const td2 = esNum(t.sd) ? t.sd : H.sup.Td;
+        const z = e && esNum(e[0]) ? e[0] : nm.z;
+        const T = e && esNum(e[1]) ? e[1] : nm.T;
+        const Td = e && esNum(e[2]) ? e[2] : nm.Td;
+        if (!esNum(td2) || !esNum(T) || !esNum(Td)) return;
+        const w = velocTermica(td2 - (z - elev) * 0.0018, Td, T);
+        if (esNum(w)) vals.push(w - U.hundimientoParapente);
+      });
+      const m = mediana(vals);
+      if (esNum(m)) out[p] = m;
+    });
+    return out;
+  }
+
   // Descenso de temperatura del suelo al techo: mediana de las pendientes de cada modelo (°C/km)
   function descensoMediana(H, elev, zTecho) {
     if (!H.tm) return null;
     const pend = Object.values(H.tm).map((t) => {
-      const pts = t.n.filter((a) => a[0] > elev + 10 && a[0] <= zTecho + 1).map((a) => ({ z: a[0], T: a[1] }));
+      const pts = t.n.filter((a) => a && a[0] > elev + 10 && a[0] <= zTecho + 1).map((a) => ({ z: a[0], T: a[1] }));
       if (esNum(t.s)) pts.unshift({ z: elev, T: t.s });
       return pts.length >= 2 ? pendiente(pts.map((p) => p.z / 1000), pts.map((p) => p.T)) : null;
     });
@@ -455,6 +492,62 @@
     return mediana(sumas);
   }
 
+  // Techo "experto" con la mediana de los modelos:
+  //  - tope térmico: el aire del suelo (T a 2 m) sube enfriándose 9,8 °C/km hasta
+  //    quedar más frío que el ambiente;
+  //    (o la capa de mezcla, si es más alta);
+  //  - base de cúmulos: 125 m por cada °C de diferencia entre T y rocío en el suelo;
+  //  - techo = el más bajo de los dos.
+  function techoExperto(pts, elev) {
+    const g = pts[0];
+    if (!g || pts.length < 2) return { z: elev, tipo: "sin" };
+    const T0 = g.T + U.techoExcesoParcela, z0 = g.z;
+    const exceso = (p) => T0 - (9.8 * (p.z - z0)) / 1000 - p.T;
+    let zTerm = pts[pts.length - 1].z;
+    for (let i = 1; i < pts.length; i++) {
+      const b = exceso(pts[i]);
+      if (b <= 0) {
+        const a = exceso(pts[i - 1]);
+        const f = a > 0 && a > b ? a / (a - b) : 0;
+        zTerm = pts[i - 1].z + f * (pts[i].z - pts[i - 1].z);
+        break;
+      }
+    }
+    // Capa de mezcla: desde el suelo, mientras la temperatura baje al menos
+    // "lapsoMezcla" °C/km entre alturas consecutivas. Respaldo por si la T a 2 m
+    // de los modelos no es coherente con el perfil.
+    // (se saltea el tramo 2 m → primer nivel, que en los modelos suele ser poco fiable)
+    let zMezcla = pts.length > 1 ? pts[1].z : z0;
+    for (let i = 2; i < pts.length; i++) {
+      const lapso = ((pts[i - 1].T - pts[i].T) * 1000) / Math.max(1, pts[i].z - pts[i - 1].z);
+      if (lapso < U.lapsoMezcla) break;
+      zMezcla = pts[i].z;
+    }
+    zTerm = Math.max(zTerm, zMezcla);
+    const zBase = esNum(g.Td) ? z0 + U.lclMetrosPorGrado * Math.max(0, g.T - g.Td) : Infinity;
+    if (Math.min(zTerm, zBase) <= elev + 100) return { z: elev, tipo: "sin", zTerm, zBase };
+    if (zBase < zTerm) return { z: zBase, tipo: "cumulos", zTerm, zBase };
+    return { z: zTerm, tipo: "azul", zTerm, zBase };
+  }
+
+  // Techo de una hora sin suavizar, con el método elegido en config.js
+  function techoCrudo(SL, fecha, hora) {
+    const H = SL.horas[`${fecha}T${pad(hora)}`];
+    if (!H) return null;
+    if (U.metodoTecho === "rocio") return calcularTecho(puntosSondeo(H, SL.elev).pts, SL.elev);
+    return techoExperto(puntosSondeo(H, SL.elev, true).pts, SL.elev);
+  }
+
+  // Suavizado: mediana de la hora anterior, la actual y la siguiente
+  // (elimina saltos aislados sin borrar la subida de la tarde)
+  function techoSuavizado(SL, fecha, hora) {
+    const actual = techoCrudo(SL, fecha, hora);
+    if (!U.suavizarTecho || !actual) return actual;
+    const c = [hora - 1, hora, hora + 1].map((h) => techoCrudo(SL, fecha, h)).filter(Boolean)
+      .sort((a, b) => a.z - b.z);
+    return c.length === 3 ? c[1] : c[0];
+  }
+
   function analizarHora(L, A, fecha, hora) {
     const SL = A.lugares[L.id];
     if (!SL) return null;
@@ -464,7 +557,7 @@
 
     // Techo y sondeo
     const { pts, fuente } = puntosSondeo(H, elev);
-    const techo = calcularTecho(pts, elev);
+    const techo = techoSuavizado(SL, fecha, hora);
     const sondeo = calcularSondeo(pts, techo.z);
     sondeo.descenso = descensoMediana(H, elev, techo.z);
     const nMin = nivelP(H, L.techoMinHPa);
@@ -560,6 +653,7 @@
     return {
       hora, pct, partes, graves, razones, techo, zMin, sondeo, fuente, pts, evals, base,
       ptsMed: puntosSondeo(H, elev, true).pts,
+      termicas: termicas(H, elev, techo.z),
       mm, H, elev, conf: confianza(H, base, U), cum, ccBajoTecho,
     };
   }
@@ -705,7 +799,7 @@
       case "cumulos": return `${fmtM(t.z)} (base de cúmulos)`;
       case "validado": return fmtM(t.z);
       case "humedo": return `${fmtM(U.techoBuscarHasta)} o más (aire húmedo en altura)`;
-      case "azul": return `≈ ${fmtM(t.z)} (térmica azul, estimado)`;
+      case "azul": return `${fmtM(t.z)} (térmica azul)`;
       default: return "sin techo útil";
     }
   }
@@ -723,7 +817,7 @@
   // ===================================================================
   // PANTALLA
   // ===================================================================
-  const CLAVE = "pronoTermico:v2";
+  const CLAVE = "pronoTermico:v3";
   const S = { A: null, R: null, tab: "resumen", hora: {}, ampliado: {}, cargando: false, errores: {} };
   const $ = (s) => document.querySelector(s);
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -918,7 +1012,7 @@
     let filas = "", sepPuesto = false;
     vis.forEach((n) => {
       if (!sepPuesto && n.z <= a.techo.z + 1) {
-        filas += `<tr class="sep"><td colspan="4">Techo ${fmtTecho(a.techo)}</td></tr>`;
+        filas += `<tr class="sep"><td colspan="5">Techo ${fmtTecho(a.techo)}</td></tr>`;
         sepPuesto = true;
       }
       const e = evalPorP[n.p];
@@ -927,13 +1021,14 @@
       filas += `<tr class="${n.z > a.techo.z + 1 ? "arriba" : ""}"><td>${punto}${fmtM(n.z)}</td>
         <td>${esNum(n.ws) ? Math.round(n.ws) : "—"} <small>km/h</small></td>
         <td>${esNum(n.T) ? Math.round(n.T) + "°" : "—"}</td>
-        <td><span class="dir">${flecha(n.wd)}${dirLabel(n.wd)}</span></td></tr>`;
+        <td><span class="dir">${flecha(n.wd)}${dirLabel(n.wd)}</span></td>
+        <td class="term">${esNum(a.termicas[n.p]) ? fmt1(Math.round(a.termicas[n.p] * 10) / 10 || 0) : ""}</td></tr>`;
     });
-    if (!sepPuesto) filas += `<tr class="sep"><td colspan="4">Techo ${fmtTecho(a.techo)}</td></tr>`;
+    if (!sepPuesto) filas += `<tr class="sep"><td colspan="5">Techo ${fmtTecho(a.techo)}</td></tr>`;
     const s = a.H.sup;
     filas += `<tr class="suelo"><td>${fmtM(a.elev)} <span class="tag">suelo</span></td>
       <td>${esNum(s.ws) ? Math.round(s.ws) : "—"} <small>km/h</small>${esNum(s.gust) ? `<small class="racha">racha ${Math.round(s.gust)}</small>` : ""}</td>
-      <td>${esNum(s.T) ? Math.round(s.T) + "°" : "—"}</td><td><span class="dir">${flecha(s.wd)}${dirLabel(s.wd)}</span></td></tr>`;
+      <td>${esNum(s.T) ? Math.round(s.T) + "°" : "—"}</td><td><span class="dir">${flecha(s.wd)}${dirLabel(s.wd)}</span></td><td></td></tr>`;
 
     const sd = a.sondeo;
     const txtSondeo = esNum(sd.descenso)
@@ -941,7 +1036,7 @@
       : sd.motivo || "sin datos";
 
     return `<div class="det">${nota}<div class="partes">${chips}</div>
-      <table class="perfil"><thead><tr><th>Altura</th><th>Viento</th><th>Temp</th><th>Dir</th></tr></thead><tbody>${filas}</tbody></table>
+      <table class="perfil"><thead><tr><th>Altura</th><th>Viento</th><th>Temp</th><th>Dir</th><th class="term">Térmica<small>m/s</small></th></tr></thead><tbody>${filas}</tbody></table>
       <p class="resumen">${resumen.map(([b, r]) => `<b>${esc(b)}</b>${esc(r)}`).join(" ")}</p>
       <div class="sondeo"><div class="sondeo-t">Sondeo ${a.hora} hs <span class="emo">${U.emojis[nivelSondeo(sd)]}</span> ${txtSondeo}</div>
       ${svgSondeo(a)}

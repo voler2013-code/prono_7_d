@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0f5c6e">
   <title>Prono 7 días</title>
-  <link rel="stylesheet" href="styles.css?v=1.4">
+  <link rel="stylesheet" href="styles.css?v=1.7">
 </head>
 <body>
   <header class="top">
@@ -29,9 +29,13 @@
         <p><b>Viento:</b> se evalúa en las alturas configuradas de cada lugar, desde el suelo hasta el techo
           (la más baja pesa el doble). En la altura más baja, una dirección fuera de las útiles vale 0; en las de arriba se tolera hasta 2 sectores de más, restando de a poco. El punto de color en la tabla indica si esa altura cumple.
           La flecha apunta hacia donde sopla. La racha se muestra solo en el suelo.</p>
-        <p><b>Techo (GFS):</b> subiendo desde el suelo, el primer punto donde el rocío más se acerca a la
-          temperatura y por encima vuelve a aparecer aire seco. Si casi se tocan, es base de cúmulos.
-          Sin ese punto se estima por el aire del suelo subiendo (térmica azul).</p>
+        <p><b>Térmica:</b> ascenso neto estimado del parapente (m/s), igual que el script original:
+          fórmula de Predelli con el rocío del suelo, menos 1,1 m/s de caída del parapente. Mediana de los
+          modelos, solo hasta el techo. Un valor negativo indica que ahí no se sube.</p>
+        <p><b>Techo:</b> con la mediana de los modelos se calculan dos alturas: hasta dónde sube el aire
+          del suelo antes de quedar más frío que el entorno (tope térmico) y la base de los cúmulos (125 m por
+          cada grado de diferencia entre temperatura y rocío en el suelo). El techo es la más baja; si son
+          los cúmulos, se indica. Se suaviza con la hora anterior y la siguiente para evitar saltos.</p>
         <p><b>Sondeo:</b> se aprueba o no con GFS, del suelo al techo (👍 aprobado, 🤏 cumple una de sus dos
           condiciones, 👎 ninguna). Se informa el descenso promedio de temperatura cada 100 m en esa capa (mediana de los modelos).
           El gráfico usa la mediana de todos los modelos.</p>
@@ -41,10 +45,10 @@
           <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> (CC BY 4.0).</p>
       </div>
     </details>
-    <div class="version">versión 1.4</div>
+    <div class="version">versión 1.7</div>
   </footer>
 
-  <script src="config.js?v=1.4"></script>
-  <script src="app.js?v=1.4"></script>
+  <script src="config.js?v=1.7"></script>
+  <script src="app.js?v=1.7"></script>
 </body>
 </html>

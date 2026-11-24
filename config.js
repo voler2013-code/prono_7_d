@@ -32,7 +32,7 @@ window.CONFIG = {
 
   lugares: [
     {
-      id: "merlo", nombre: "Merlo", lat: -32.34, lon: -64.98, techoMinHPa: 800,
+      id: "merlo", nombre: "Merlo", lat: -32.369, lon: -64.947, techoMinHPa: 800,
       viento: [
         { hPa: 900, max: 14, dirs: "NO ONO O OSO" },
         { hPa: 850, max: 21, dirs: "N NNO NO ONO O OSO" },
@@ -40,28 +40,28 @@ window.CONFIG = {
       ],
     },
     {
-      id: "npaula", nombre: "N.Paula", lat: -31.72, lon: -65.00, techoMinHPa: 800,
+      id: "npaula", nombre: "N.Paula", lat: -31.738, lon: -64.924, techoMinHPa: 800,
       viento: [
         { hPa: 850, max: 15, dirs: "NNO NO ONO O OSO" },
         { hPa: 800, max: 18, dirs: "NNE N NNO NO ONO O OSO" },
       ],
     },
     {
-      id: "pedernera", nombre: "Pedernera", lat: -31.76, lon: -64.65, techoMinHPa: 800,
+      id: "pedernera", nombre: "Pedernera", lat: -31.616, lon: -64.686, techoMinHPa: 800,
       viento: [
         { hPa: 850, max: 19, dirs: "ENE E ESE SE" },
         { hPa: 800, max: 18, dirs: "NNE NE ENE E ESE SE SSE" },
       ],
     },
     {
-      id: "valpina", nombre: "V.Alpina", lat: -32.02, lon: -64.81, techoMinHPa: 800,
+      id: "valpina", nombre: "V.Alpina", lat: -31.969, lon: -64.824, techoMinHPa: 800,
       viento: [
         { hPa: 850, max: 19, dirs: "ENE E ESE SE" },
         { hPa: 800, max: 18, dirs: "N NNE NE ENE E ESE SE SSE S" },
       ],
     },
     {
-      id: "sjorge", nombre: "S.Jorge", lat: -31.32, lon: -64.34, techoMinHPa: 850,
+      id: "sjorge", nombre: "S.Jorge", lat: -31.318, lon: -64.350, techoMinHPa: 850,
       viento: [
         { hPa: 950, max: 19, dirs: "E ESE SE" },
         { hPa: 925, max: 20, dirs: "N NNE NE ENE E ESE SE SSE" },
@@ -70,7 +70,7 @@ window.CONFIG = {
       ],
     },
     {
-      id: "ccorral", nombre: "C.Corral", lat: -30.99, lon: -64.71, techoMinHPa: 800,
+      id: "ccorral", nombre: "C.Corral", lat: -30.966, lon: -64.586, techoMinHPa: 800,
       viento: [
         { hPa: 900, max: 18, dirs: "NNO NO ONO O" },
         { hPa: 850, max: 21, dirs: "NE NNE N NNO NO ONO O" },
@@ -98,7 +98,18 @@ window.CONFIG = {
     // Lluvia acumulada 12–18 hs (mm)
     lluviaOk: 5, lluviaCero: 10,
 
-    // Techo (GFS)
+    // Techo
+    // "experto": con la mediana de los modelos, el más bajo entre el tope térmico
+    //   (aire del suelo subiendo a 9,8 °C/km) y la base de cúmulos (125 m por °C
+    //   de diferencia entre temperatura y rocío en el suelo).
+    // "rocio": el método anterior (primer mínimo T−Td con capa seca arriba, GFS).
+    metodoTecho: "experto",
+    techoExcesoParcela: 0,     // °C extra del aire del suelo (más = techo más alto)
+    lclMetrosPorGrado: 125,
+    lapsoMezcla: 7,            // °C/km: capa de mezcla mientras la T baje al menos esto
+    suavizarTecho: true,       // mediana de hora anterior, actual y siguiente
+
+    // Solo para metodoTecho "rocio" (GFS)
     techoBuscarDesde: 200,     // m sobre el terreno
     techoBuscarHasta: 4500,    // m s.n.m.
     techoValidarSubida: 2,     // °C que T−Td debe volver a subir...
@@ -112,6 +123,9 @@ window.CONFIG = {
     // Pulgares de cada parámetro: arriba desde emojiBien, medio desde emojiMedio
     emojis: { bien: "👍", medio: "🤏", mal: "👎" },
     emojiBien: 0.9, emojiMedio: 0.5,
+
+    // Térmica: caída del parapente girando en aire en calma (m/s), se resta al ascenso
+    hundimientoParapente: 1.1,
 
     // Tope de % ante fallas graves
     topeFallaGrave: 30,
