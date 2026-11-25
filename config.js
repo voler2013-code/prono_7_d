@@ -164,7 +164,8 @@ window.CONFIG = {
     capeSobredesarrollo: 1000, // J/kg
     cambioVel: 10,             // km/h en 2 h
     cambioDir: 45,             // grados en 2 h
-    lluviaHoraAviso: 0.5,      // mm/h
+    lluviaHoraAviso: 0.5,      // mm acumulados para avisar "Lluvia acum." en el resumen
+    lluviaHoraMin: 0.1,        // mm/h para contar una hora como "con lluvia"
 
     // Confianza
     confAlta: { modelos: 5, dirSpread: 30, velSigma: 5 },

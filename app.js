@@ -790,7 +790,7 @@
     if (sMed < 0.999) razones.push(`Nubes medias: ${Math.round(H.sup.cm)}%`);
     if (sAlt < 0.999) razones.push(`Nubes altas: ${Math.round(H.sup.ch)}%`);
     if (rachaFuerte) razones.push(`Racha en el suelo: ${Math.round(racha)} km/h (debe ser menor a ${U.rachaSueloMax})`);
-    if (sLluvia < 0.999) razones.push(`Lluvia ${hora - 3}–${hora + 3} hs: ${fmt1(mm)} mm`);
+    if (sLluvia < 0.999) razones.push(`Lluvia acum.: ${fmt1(mm)} mm`);
 
     return {
       hora, pct, partes, calidad, llave, razones, techo, zMin, sondeo, fuente, pts, evals, base,
@@ -869,14 +869,14 @@
     // Viento en el despegue
     const despegue = (a) => a.base;
     const manana = hs.filter((h) => h < C.horaRef && h >= 11 && despegue(an[h]) && despegue(an[h]).sDir === 0);
-    if (manana.length) F.push(["Viento en el despegue", `: no útil hasta las ${manana[manana.length - 1]} hs.`]);
+    if (manana.length) F.push(["Cambio viento despegue", `: no útil hasta las ${manana[manana.length - 1]} hs.`]);
     const post = hs.filter((h) => h > C.horaRef).find((h) => despegue(an[h]) && despegue(an[h]).sDir === 0);
     if (post) {
       const b = despegue(an[post]);
-      F.push(["Viento en el despegue", `: desde las ${post} hs pasa a ${dirLabel(b.wd)} ${Math.round(b.ws)} km/h (${fmtM(b.z)}), fuera de las direcciones útiles.`]);
+      F.push(["Cambio viento despegue", `: desde las ${post} hs pasa a ${dirLabel(b.wd)} ${Math.round(b.ws)} km/h (${fmtM(b.z)}), fuera de las direcciones útiles.`]);
     } else {
       const fuerte = hs.filter((h) => h > C.horaRef).find((h) => despegue(an[h]) && despegue(an[h]).sVel === 0);
-      if (fuerte) F.push(["Viento en el despegue", `: sube a ${Math.round(despegue(an[fuerte]).ws)} km/h desde las ${fuerte} hs.`]);
+      if (fuerte) F.push(["Cambio viento despegue", `: sube a ${Math.round(despegue(an[fuerte]).ws)} km/h desde las ${fuerte} hs.`]);
     }
 
     // Cambios bruscos (cada 2 h) en los niveles configurados
@@ -897,19 +897,36 @@
     }
 
     // Nubes
+    // Altura referencial de la capa: el nivel más nublado dentro de su franja
+    // (bajas: hasta 3 km; medias: 3 a 8 km; altas: desde 8 km, por encima de los niveles pedidos)
+    const alturaCapa = (a, desde, hasta) => {
+      let mejor = null;
+      a.H.niv.forEach((n) => {
+        if (!esNum(n.z) || !esNum(n.cc) || n.z <= a.elev || n.z < desde || n.z > hasta) return;
+        if (!mejor || n.cc > mejor.cc) mejor = n;
+      });
+      return mejor && mejor.cc > 0 ? ` ~${fmtM(mejor.z)}` : "";
+    };
     const nub = (a) => {
       const s = a.H.sup;
-      if (esNum(s.cl) && s.cl > U.nubesBajas) return `nubes bajas ${Math.round(s.cl)}%`;
-      if (esNum(s.cm) && s.cm > U.nubesMedias) return `nubes medias ${Math.round(s.cm)}%`;
-      if (esNum(s.ch) && s.ch > U.nubesAltas) return `nubes altas ${Math.round(s.ch)}%`;
+      if (esNum(s.cl) && s.cl > U.nubesBajas) return `nubes bajas ${Math.round(s.cl)}%${alturaCapa(a, 0, 3000)}`;
+      if (esNum(s.cm) && s.cm > U.nubesMedias) return `nubes medias ${Math.round(s.cm)}%${alturaCapa(a, 3000, 8000)}`;
+      if (esNum(s.ch) && s.ch > U.nubesAltas) return `nubes altas ${Math.round(s.ch)}% ~8.000 m o más`;
       return null;
     };
     const hn = hs.find((h) => nub(an[h]));
-    if (hn !== undefined) F.push(["Nublado", hn === hs[0] ? ` desde la mañana (${nub(an[hn])}).` : ` desde las ${hn} hs (${nub(an[hn])}).`]);
+    if (hn !== undefined) F.push(["Nublado", hn === hs[0] ? ` desde la mañana (${nub(an[hn])}).` : ` desde ${hn} hs (${nub(an[hn])}).`]);
 
     // Lluvia
-    const hl = hs.find((h) => esNum(an[h].H.sup.pp) && an[h].H.sup.pp >= U.lluviaHoraAviso);
-    if (hl !== undefined) F.push(["Lluvia", ` desde las ${hl} hs (${fmt1(ref.mm || 0)} mm entre las 12 y las 18 hs).`]);
+    // Horario en que los modelos dan lluvia (cada valor es lo que llovió en la hora anterior)
+    const conLluvia = hs.filter((h) => esNum(an[h].H.sup.pp) && an[h].H.sup.pp >= U.lluviaHoraMin);
+    if (conLluvia.length) {
+      const acum = conLluvia.reduce((t, h) => t + an[h].H.sup.pp, 0);
+      if (acum >= U.lluviaHoraAviso) {
+        const ini = conLluvia[0] - 1, fin = conLluvia[conLluvia.length - 1];
+        F.push(["Lluvia acum.", ` ${ini}-${fin}hs: ${fmt1(acum)} mm.`]);
+      }
+    }
 
     // Sobredesarrollo
     const hs2 = hs.find((h) => esNum(an[h].H.sup.cape) && an[h].H.sup.cape >= U.capeSobredesarrollo &&
