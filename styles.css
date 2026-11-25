@@ -220,3 +220,6 @@ main { padding: 8px; }
 /* Botón Actualizar en la fila del título: la línea de datos usa todo el ancho */
 .listo .btn-sec { position: absolute; top: max(8px, env(safe-area-inset-top)); right: 12px; }
 .listo { display: block; }
+.ayuda.clave { margin-top: 6px; }
+.clave-fila { display: flex; gap: 6px; align-items: center; }
+.clave-fila input { flex: 1; min-width: 0; font: inherit; padding: 6px 8px; border: 1px solid var(--ln); border-radius: 8px; background: var(--bg); color: var(--tx); }

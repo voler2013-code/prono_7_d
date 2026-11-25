@@ -119,6 +119,24 @@
     }
   }
 
+  // ---- Servidor: primero la API paga (customer-api + apikey); si falla, la gratuita ----
+  const CLAVE_API = "pronoTermico:apikey";
+  function claveApi() {
+    try { return localStorage.getItem(CLAVE_API) || C.apiKey || ""; } catch (e) { return C.apiKey || ""; }
+  }
+  let pagaDeshabilitada = false; // tras un rechazo de la clave (401/403) en esta sesión
+  const SERV_GRATIS = { host: "api.open-meteo.com", key: "", tipo: "gratis" };
+  const servPaga = () => ({ host: (C.apiPaga && C.apiPaga.host) || "customer-api.open-meteo.com", key: claveApi(), tipo: "paga" });
+  function conServidor(url, srv) {
+    return url.replace("https://api.open-meteo.com/", `https://${srv.host}/`) +
+      (srv.key ? `&apikey=${encodeURIComponent(srv.key)}` : "");
+  }
+  function errorCon(res) {
+    const e = new Error((res.json && res.json.reason) || res.error || `error ${res.status}`);
+    e.status = res.status;
+    return e;
+  }
+
   // Consulta aparte y chica: calor sensible del suelo y radiación solar (para la térmica).
   // Si el modelo no tiene alguna variable, se prueba solo con la radiación; si falla, se ignora.
   function urlExtra(modelo, vars) {
@@ -128,34 +146,47 @@
       `?latitude=${lat}&longitude=${lon}&hourly=${vars.join(",")}` +
       `&models=${modelo}&timezone=${encodeURIComponent(TZ)}&forecast_days=${C.dias}`;
   }
-  async function descargarExtra(modelo) {
+  async function descargarExtra(modelo, srv) {
     for (const vars of [["sensible_heat_flux", "shortwave_radiation"], ["shortwave_radiation"]]) {
-      const res = await pedir(urlExtra(modelo, vars));
+      const res = await pedir(conServidor(urlExtra(modelo, vars), srv));
       if (res.status === 200 && res.json) return Array.isArray(res.json) ? res.json : [res.json];
       if (res.status !== 400) return null;
     }
     return null;
   }
 
-  async function descargarModelo(modelo, aviso) {
+  async function descargarModeloEn(modelo, aviso, srv) {
+    const paga = srv.tipo === "paga";
     let reducido = false;
     for (let intento = 0; intento < 4; intento++) {
-      const res = await pedir(urlModelo(modelo, reducido));
+      const res = await pedir(conServidor(urlModelo(modelo, reducido), srv));
       if (res.status === 200 && res.json) {
         let extra = null;
-        try { extra = await descargarExtra(modelo); } catch (e) { extra = null; }
-        return { datos: Array.isArray(res.json) ? res.json : [res.json], reducido, extra };
+        try { extra = await descargarExtra(modelo, srv); } catch (e) { extra = null; }
+        return { datos: Array.isArray(res.json) ? res.json : [res.json], reducido, extra, api: srv.tipo };
       }
       // Variable no disponible en ese modelo → se reintenta con niveles estándar
       if (res.status === 400 && !reducido) { reducido = true; continue; }
-      if (res.status === 429) {
+      // Con la API paga no se espera: ante límite o falla se pasa a la gratuita
+      if (res.status === 429 && !paga) {
         for (let s = 65; s > 0; s--) { aviso(`Límite de la API: reintento en ${s} s`); await esperar(1000); }
         continue;
       }
-      if (res.status === 0 && intento < 2) { await esperar(2000); continue; }
-      throw new Error((res.json && res.json.reason) || res.error || `error ${res.status}`);
+      if (res.status === 0 && intento < (paga ? 1 : 2)) { await esperar(2000); continue; }
+      throw errorCon(res);
     }
     throw new Error("no respondió");
+  }
+
+  async function descargarModelo(modelo, aviso) {
+    if (claveApi() && !pagaDeshabilitada) {
+      try {
+        return await descargarModeloEn(modelo, aviso, servPaga());
+      } catch (e) {
+        if (e.status === 401 || e.status === 403) pagaDeshabilitada = true;
+      }
+    }
+    return descargarModeloEn(modelo, aviso, SERV_GRATIS);
   }
 
   async function descargarTodo(onProg) {
@@ -1023,6 +1054,8 @@
         return;
       }
       S.A = procesar(ok);
+      const nPaga = Object.values(ok).filter((r) => r.api === "paga").length;
+      S.A.api = { paga: nPaga, total: Object.keys(ok).length };
       try { S.A.proxima = await proximaActualizacion(); } catch (e) { S.A.proxima = null; }
       S.errores = err;
       S.R = analizarTodo(S.A);
@@ -1038,7 +1071,19 @@
   }
 
   // ---------- Vistas ----------
+  function pieVersion() {
+    const el = document.querySelector(".version");
+    if (!el) return;
+    if (!el.dataset.base) el.dataset.base = el.textContent.trim();
+    const a = S.A && S.A.api;
+    const txt = !a ? "" : a.paga === a.total ? " · API paga" : a.paga === 0 ? " · API gratis" : ` · API paga ${a.paga}/${a.total}`;
+    el.textContent = el.dataset.base + txt;
+    const est = document.getElementById("clave-estado");
+    if (est) est.textContent = claveApi() ? "Hay una clave guardada en este teléfono." : "Sin clave: se usa la API gratuita.";
+  }
+
   function render() {
+    pieVersion();
     if (!S.A) return;
     if (!S.cargando) $("#estado").innerHTML = htmlEstadoListo();
     const dias = diasVisibles();
@@ -1225,6 +1270,18 @@
     if (!b) return;
     const act = b.dataset.act;
     if (act === "actualizar") actualizar();
+    else if (act === "guardar-clave") {
+      const v = (document.getElementById("apikey").value || "").trim();
+      if (!v) return;
+      try { localStorage.setItem(CLAVE_API, v); } catch (e) { /* sin almacenamiento */ }
+      document.getElementById("apikey").value = "";
+      pagaDeshabilitada = false;
+      pieVersion();
+      actualizar();
+    } else if (act === "borrar-clave") {
+      try { localStorage.removeItem(CLAVE_API); } catch (e) { /* sin almacenamiento */ }
+      pieVersion();
+    }
     else if (act === "tab") {
       S.tab = b.dataset.tab;
       render();
@@ -1243,6 +1300,7 @@
 
   // ---------- Inicio ----------
   function iniciar() {
+    pieVersion();
     const c = leerCache();
     if (c) {
       S.A = c.A;

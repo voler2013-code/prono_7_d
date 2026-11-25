@@ -7,6 +7,13 @@
 // N NNE NE ENE E ESE SE SSE S SSO SO OSO O ONO NO NNO
 
 window.CONFIG = {
+  // API paga de Open-Meteo: se usa primero; si falla, la gratuita.
+  // Recomendado: dejar apiKey vacío y cargar la clave desde la app (abajo de todo,
+  // "Clave API"): queda guardada solo en el teléfono. Si se escribe acá, queda
+  // pública en GitHub y cualquiera podría usar tu cupo.
+  apiPaga: { host: "customer-api.open-meteo.com" },
+  apiKey: "",
+
   // Modelos de Open-Meteo para las medianas
   modelos: [
     "icon_seamless",
