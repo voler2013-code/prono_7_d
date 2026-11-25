@@ -748,15 +748,7 @@
     const rachaFuerte = esNum(racha) && racha >= U.rachaSueloMax;
 
     // Nubes
-    const cum = techo.tipo === "cumulos";
-    let ccBajoTecho = null, sBaja;
-    if (cum) {
-      const bajo = H.niv.filter((n) => esNum(n.z) && n.z > elev && n.z <= techo.z - 300 && esNum(n.cc)).map((n) => n.cc);
-      ccBajoTecho = bajo.length ? Math.max(...bajo) : null;
-      sBaja = Math.min(puntajeCapa(ccBajoTecho, U.nubesBajas), puntajeCapa(H.sup.cl, U.nubesBajasConCumulos));
-    } else {
-      sBaja = puntajeCapa(H.sup.cl, U.nubesBajas);
-    }
+    const sBaja = puntajeCapa(H.sup.cl, U.nubesBajas);
     const sMed = puntajeCapa(H.sup.cm, U.nubesMedias);
     const sAlt = puntajeCapa(H.sup.ch, U.nubesAltas);
     const wn = U.pesoNubes;
@@ -793,9 +785,7 @@
     }
     if (sTecho < 0.999) razones.push(`${etiquetaTecho(techo)} ${fmtTecho(techo)}, por debajo del mínimo de ${fmtM(zMin)}`);
     if (sBaja < 0.999) {
-      razones.push(cum && esNum(ccBajoTecho) && ccBajoTecho > U.nubesBajas
-        ? `Nubes por debajo del techo: ${Math.round(ccBajoTecho)}%`
-        : `Nubes bajas: ${Math.round(H.sup.cl)}%`);
+      razones.push(`Nubes bajas: ${Math.round(H.sup.cl)}%`);
     }
     if (sMed < 0.999) razones.push(`Nubes medias: ${Math.round(H.sup.cm)}%`);
     if (sAlt < 0.999) razones.push(`Nubes altas: ${Math.round(H.sup.ch)}%`);
@@ -807,7 +797,7 @@
       ptsMed: puntosSondeo(H, elev, true).pts,
       termicas: (term = termicas(H, elev, techo.z)),
       zVol: alturaVolable(term, H, elev),
-      mm, H, elev, conf: confianza(H, base, U), cum, ccBajoTecho,
+      mm, H, elev, conf: confianza(H, base, U),
     };
   }
 
@@ -844,26 +834,33 @@
     return out.map(([a, b]) => (a === b ? `${a} hs` : `${a} a ${b} hs`));
   }
 
-  // Devuelve frases [palabra principal, resto] para mostrar la principal en negrita
+  // Resumen en dos partes: { h15: frases de la hora de referencia, resto: avisos del
+  // resto del día }. Cada frase es [palabra principal, resto] (la principal va en negrita).
   function resumenDia(an) {
     const ref = an[C.horaRef];
-    if (!ref) return [["Sin datos", ` para las ${C.horaRef} hs.`]];
-    const F = [];
+    if (!ref) return { h15: [["Sin datos", "."]], resto: [] };
+    const P15 = [], F = [];
     const hs = Object.keys(an).map(Number).sort((a, b) => a - b);
 
-    // Techo
-    let t = ` a las ${C.horaRef} hs: ${fmtTecho(ref.techo)}`;
+    // A la hora de referencia
+    P15.push([etiquetaTecho(ref.techo), `: ${fmtTecho(ref.techo)}.`]);
+    P15.push(["Altura volable", `: ${fmtVolable(ref.zVol)}.`]);
+    if (esNum(ref.H.sup.gust)) {
+      const g = Math.round(ref.H.sup.gust);
+      P15.push(["Racha", ` en el suelo: ${g} km/h${ref.H.sup.gust >= U.rachaSueloMax ? ` (supera ${U.rachaSueloMax})` : ""}.`]);
+    }
+
+    // Resto del día: evolución del techo
     let mejor = null;
     hs.filter((h) => h > C.horaRef).forEach((h) => {
       if (!mejor || an[h].techo.z > mejor.techo.z) mejor = an[h];
     });
-    if (mejor && mejor.techo.z > ref.techo.z + 200) t += `; sube a ${fmtM(mejor.techo.z)} a las ${mejor.hora} hs`;
-    else {
+    if (mejor && mejor.techo.z > ref.techo.z + 200) {
+      F.push([etiquetaTecho(mejor.techo), ` sube a ${fmtM(mejor.techo.z)} a las ${mejor.hora} hs.`]);
+    } else {
       const baja = hs.filter((h) => h > C.horaRef).map((h) => an[h]).find((a) => a.techo.z < ref.techo.z - 300);
-      if (baja) t += `; baja a ${fmtM(baja.techo.z)} a las ${baja.hora} hs`;
+      if (baja) F.push([etiquetaTecho(baja.techo), ` baja a ${fmtM(baja.techo.z)} a las ${baja.hora} hs.`]);
     }
-    F.push([etiquetaTecho(ref.techo), t + "."]);
-    F.push(["Altura volable", `: ${fmtVolable(ref.zVol)}.`]);
 
     // Ventana volable
     const vol = hs.filter((h) => an[h].pct >= 50);
@@ -876,7 +873,7 @@
     const post = hs.filter((h) => h > C.horaRef).find((h) => despegue(an[h]) && despegue(an[h]).sDir === 0);
     if (post) {
       const b = despegue(an[post]);
-      F.push(["Viento en el despegue", `: desde las ${post} hs pasa a ${dirLabel(b.wd)} ${Math.round(b.ws)} km/h (${fmtM(b.z)}), fuera de las direcciones útiles; complica aterrizar o redespegar ahí.`]);
+      F.push(["Viento en el despegue", `: desde las ${post} hs pasa a ${dirLabel(b.wd)} ${Math.round(b.ws)} km/h (${fmtM(b.z)}), fuera de las direcciones útiles.`]);
     } else {
       const fuerte = hs.filter((h) => h > C.horaRef).find((h) => despegue(an[h]) && despegue(an[h]).sVel === 0);
       if (fuerte) F.push(["Viento en el despegue", `: sube a ${Math.round(despegue(an[fuerte]).ws)} km/h desde las ${fuerte} hs.`]);
@@ -901,8 +898,8 @@
 
     // Nubes
     const nub = (a) => {
-      const s = a.H.sup, limB = a.cum ? U.nubesBajasConCumulos : U.nubesBajas;
-      if (esNum(s.cl) && s.cl > limB) return `nubes bajas ${Math.round(s.cl)}%`;
+      const s = a.H.sup;
+      if (esNum(s.cl) && s.cl > U.nubesBajas) return `nubes bajas ${Math.round(s.cl)}%`;
       if (esNum(s.cm) && s.cm > U.nubesMedias) return `nubes medias ${Math.round(s.cm)}%`;
       if (esNum(s.ch) && s.ch > U.nubesAltas) return `nubes altas ${Math.round(s.ch)}%`;
       return null;
@@ -919,12 +916,7 @@
       (an[h].techo.tipo === "humedo" || an[h].techo.tipo === "cumulos"));
     if (hs2 !== undefined) F.push(["Sobredesarrollo", `: riesgo desde las ${hs2} hs (CAPE ${an[hs2].H.sup.cape} J/kg).`]);
 
-    // Racha en el suelo
-    if (esNum(ref.H.sup.gust)) {
-      const g = Math.round(ref.H.sup.gust);
-      F.push(["Racha", ` en el suelo a las ${C.horaRef} hs: ${g} km/h${ref.H.sup.gust >= U.rachaSueloMax ? ` (supera ${U.rachaSueloMax})` : ""}.`]);
-    }
-    return F;
+    return { h15: P15, resto: F };
   }
 
   function analizarTodo(A) {
@@ -1170,6 +1162,14 @@
     return `<svg class="flecha" viewBox="0 0 24 24" style="transform:rotate(${Math.round((wd + 180) % 360)}deg)" aria-hidden="true"><path d="M12 2l6 9h-4v11h-4V11H6z"/></svg>`;
   }
 
+  function htmlResumenDia(r) {
+    const fr = (lista) => lista.map(([b, t]) => `<b>${esc(b)}</b>${esc(t)}`).join(" ");
+    return `<div class="resumen">
+      <p class="res-15"><span class="etq etq-15">${C.horaRef} hs</span> ${fr(r.h15)}</p>
+      ${r.resto.length ? `<p class="res-resto"><span class="etq etq-resto">Resto del día</span> ${fr(r.resto)}</p>` : ""}
+    </div>`;
+  }
+
   function htmlDetalle(L, a, resumen) {
     const nombres = { despegue: "Despegue", viento: "Viento", sondeo: "Sondeo", techo: "Techo", nubes: "Nubes", lluvia: "Lluvia" };
     const chips = Object.keys(nombres).map((k) => {
@@ -1191,7 +1191,7 @@
     let filas = "", sepPuesto = false;
     vis.forEach((n) => {
       if (!sepPuesto && n.z <= a.techo.z + 1) {
-        filas += `<tr class="sep"><td colspan="5">${etiquetaTecho(a.techo)}: ${fmtTecho(a.techo)} · Altura volable: ${fmtVolable(a.zVol)}</td></tr>`;
+        filas += `<tr class="sep"><td colspan="6">${etiquetaTecho(a.techo)}: ${fmtTecho(a.techo)} · Altura volable: ${fmtVolable(a.zVol)}</td></tr>`;
         sepPuesto = true;
       }
       // Solo pantalla: si redondeada coincide con la del suelo, no se muestra la fila
@@ -1204,13 +1204,14 @@
         <td>${esNum(n.ws) ? Math.round(n.ws) : "—"} <small>km/h</small></td>
         <td>${esNum(n.T) ? Math.round(n.T) + "°" : "—"}</td>
         <td><span class="dir">${flecha(n.wd)}${dirLabel(n.wd)}</span></td>
+        <td class="nub"${esNum(n.cc) ? ` style="--a:${(Math.max(0, Math.min(100, n.cc)) / 100).toFixed(2)}"` : ""}>${esNum(n.cc) ? Math.round(n.cc) + "%" : ""}</td>
         <td class="term">${esNum(a.termicas[n.p]) ? fmt1(Math.round(valorTermica(a.termicas[n.p]) * 10) / 10 || 0) : ""}</td></tr>`;
     });
-    if (!sepPuesto) filas += `<tr class="sep"><td colspan="5">${etiquetaTecho(a.techo)}: ${fmtTecho(a.techo)} · Altura volable: ${fmtVolable(a.zVol)}</td></tr>`;
+    if (!sepPuesto) filas += `<tr class="sep"><td colspan="6">${etiquetaTecho(a.techo)}: ${fmtTecho(a.techo)} · Altura volable: ${fmtVolable(a.zVol)}</td></tr>`;
     const s = a.H.sup;
     filas += `<tr class="suelo"><td>${fmtM(a.elev)} <span class="tag">suelo</span></td>
       <td>${esNum(s.ws) ? Math.round(s.ws) : "—"} <small>km/h</small>${esNum(s.gust) ? ` <small class="racha">r ${Math.round(s.gust)}</small>` : ""}</td>
-      <td>${esNum(s.T) ? Math.round(s.T) + "°" : "—"}</td><td><span class="dir">${flecha(s.wd)}${dirLabel(s.wd)}</span></td><td></td></tr>`;
+      <td>${esNum(s.T) ? Math.round(s.T) + "°" : "—"}</td><td><span class="dir">${flecha(s.wd)}${dirLabel(s.wd)}</span></td><td class="nub"></td><td></td></tr>`;
 
     const sd = a.sondeo;
     const txtSondeo = esNum(sd.descenso)
@@ -1218,8 +1219,8 @@
       : sd.motivo || "sin datos";
 
     return `<div class="det">${nota}<div class="partes">${chips}</div>
-      <table class="perfil"><thead><tr><th>Altura</th><th>Viento</th><th>Temp</th><th>Dir</th><th class="term">Térmica <small>m/s</small></th></tr></thead><tbody>${filas}</tbody></table>
-      ${bajoTerreno}<p class="resumen">${resumen.map(([b, r]) => `<b>${esc(b)}</b>${esc(r)}`).join(" ")}</p>
+      <table class="perfil"><thead><tr><th>Altura</th><th>Viento</th><th>Temp</th><th>Dir</th><th class="nub">Nubes</th><th class="term">Térmica <small>m/s</small></th></tr></thead><tbody>${filas}</tbody></table>
+      ${bajoTerreno}${htmlResumenDia(resumen)}
       <div class="sondeo"><div class="sondeo-t">Sondeo ${a.hora} hs <span class="emo">${U.emojis[nivelSondeo(sd)]}</span> ${txtSondeo}</div>
       ${svgSondeo(a)}
       <div class="leyenda"><span class="lt">— temperatura</span><span class="ltd">— rocío</span><span class="lpa">··· aire del suelo subiendo</span></div></div></div>`;

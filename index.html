@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0f5c6e">
   <title>Prono 7 días</title>
-  <link rel="stylesheet" href="styles.css?v=1.16">
+  <link rel="stylesheet" href="styles.css?v=1.17">
 </head>
 <body>
   <header class="top">
@@ -33,6 +33,10 @@
         <p><b>Térmica:</b> velocidad del aire en la térmica (m/s), como SkySight; el parapente sube alrededor de
           1,1 m/s menos. Sale del calor que el sol le da al suelo (mediana de los modelos) y de la altura de la capa:
           es más fuerte con sol pleno y techo alto, y se apaga cerca del techo.</p>
+        <p><b>Nubes:</b> la columna muestra el % de cobertura en cada altura a la hora elegida (más gris, más
+          cubierto). Para el puntaje: nubes bajas menos de 60%, medias menos de 70%, altas menos de 80%.</p>
+        <p><b>Resumen:</b> la primera parte es la hora de referencia (15 hs); "Resto del día" avisa cambios en
+          los demás horarios.</p>
         <p><b>Base nube / Techo:</b> si hay cúmulos se muestra la base de nube; si no, el techo de la térmica azul.
           <b>Altura volable:</b> hasta donde la térmica supera 0,9 m/s (criterio de SkySight).</p>
         <p><b>Techo:</b> con la mediana de los modelos se calculan dos alturas: hasta dónde sube el aire
@@ -60,10 +64,10 @@
         <p id="clave-estado"></p>
       </div>
     </details>
-    <div class="version">versión 1.16</div>
+    <div class="version">versión 1.17</div>
   </footer>
 
-  <script src="config.js?v=1.16"></script>
-  <script src="app.js?v=1.16"></script>
+  <script src="config.js?v=1.17"></script>
+  <script src="app.js?v=1.17"></script>
 </body>
 </html>

@@ -223,3 +223,13 @@ main { padding: 8px; }
 .ayuda.clave { margin-top: 6px; }
 .clave-fila { display: flex; gap: 6px; align-items: center; }
 .clave-fila input { flex: 1; min-width: 0; font: inherit; padding: 6px 8px; border: 1px solid var(--ln); border-radius: 8px; background: var(--bg); color: var(--tx); }
+/* Columna de nubes: fondo más gris cuanto más cubierto */
+.perfil th.nub, .perfil td.nub { text-align: right; }
+.perfil td.nub { background: rgba(120, 135, 145, calc(var(--a, 0) * 0.55)); }
+/* Resumen en dos partes */
+.resumen p { margin: 0; }
+.resumen p + p { margin-top: 4px; padding-top: 4px; border-top: 1px dashed var(--ln); }
+.etq { display: inline-block; font-size: 10.5px; font-weight: 700; border-radius: 5px; padding: 0 5px; margin-right: 2px; vertical-align: 1px; }
+.etq-15 { background: #d7ecf5; color: #0f5c6e; }
+.etq-resto { background: #fbe9c6; color: #7a4d00; }
+@media (prefers-color-scheme: dark) { .etq-15 { background: #123c48; color: #9fdcec; } .etq-resto { background: #4a3a17; color: #f5d796; } }

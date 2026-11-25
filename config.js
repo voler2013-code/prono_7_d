@@ -117,7 +117,6 @@ window.CONFIG = {
 
     // Nubes (% de cobertura). Pesos internos dentro del parámetro nubes.
     nubesBajas: 60, nubesMedias: 70, nubesAltas: 80,
-    nubesBajasConCumulos: 85,  // tolerancia si el techo es base de cúmulos
     pesoNubes: { bajas: 0.5, medias: 0.3, altas: 0.2 },
 
     // Lluvia acumulada 12–18 hs (mm)
