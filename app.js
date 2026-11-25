@@ -869,7 +869,7 @@
     // Viento en el despegue
     const despegue = (a) => a.base;
     const manana = hs.filter((h) => h < C.horaRef && h >= 11 && despegue(an[h]) && despegue(an[h]).sDir === 0);
-    if (manana.length) F.push(["Cambio viento despegue", `: no útil hasta las ${manana[manana.length - 1]} hs.`]);
+    if (manana.length) F.push(["Viento despegue", `: no útil hasta las ${manana[manana.length - 1]} hs.`]);
     const post = hs.filter((h) => h > C.horaRef).find((h) => despegue(an[h]) && despegue(an[h]).sDir === 0);
     if (post) {
       const b = despegue(an[post]);
