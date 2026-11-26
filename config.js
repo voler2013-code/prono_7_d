@@ -57,46 +57,51 @@ window.CONFIG = {
     {
       id: "merlo", nombre: "Merlo", lat: -32.369, lon: -64.947, techoMinHPa: 800,
       viento: [
-        { hPa: 850, max: 14, dirs: "NO ONO O OSO" },
-        { hPa: 800, max: 21, dirs: "N NNO NO ONO O OSO" },
+        { hPa: 850, max: 15, dirs: "NO ONO O OSO" },        //1500m
+        { hPa: 825, max: 21, dirs: "N NNO NO ONO O OSO" },         //1800m
+        { hPa: 800, max: 21, dirs: "NNE N NNO NO ONO O OSO" },  //2000m
       ],
     },
     {
       id: "npaula", nombre: "N.Paula", lat: -31.738, lon: -64.924, techoMinHPa: 800,
       viento: [
-        { hPa: 850, max: 15, dirs: "NNO NO ONO O OSO" },
-        { hPa: 800, max: 18, dirs: "NNE N NNO NO ONO O OSO" },
+        { hPa: 850, max: 15, dirs: "NNO NO ONO O OSO" },           //1500m
+        { hPa: 825, max: 18, dirs: "N NNO NO ONO O OSO" },         //1800m
+        { hPa: 800, max: 18, dirs: "NNE N NNO NO ONO O OSO SO" },     //2000m
       ],
     },
     {
       id: "pedernera", nombre: "Pedernera", lat: -31.606, lon: -64.687, techoMinHPa: 800,
       viento: [
-        { hPa: 850, max: 19, dirs: "ENE E ESE SE" },
-        { hPa: 800, max: 18, dirs: "NNE NE ENE E ESE SE" },
+        { hPa: 850, max: 17, dirs: "ENE E ESE SE" },          //1500m
+        { hPa: 825, max: 18, dirs: "NNE NE ENE E ESE SE" },   //1800m
+        { hPa: 800, max: 18, dirs: "N NNE NE ENE E ESE SE SSE" },   //2000m
       ],
     },
     {
       id: "valpina", nombre: "V.Alpina", lat: -31.969, lon: -64.824, techoMinHPa: 800,
       viento: [
-        { hPa: 850, max: 19, dirs: "ENE E ESE SE" },
-        { hPa: 800, max: 18, dirs: "N NNE NE ENE E ESE SE SSE S" },
+        { hPa: 850, max: 17, dirs: "ENE E ESE SE" },          //1500m
+        { hPa: 825, max: 18, dirs: "NNE NE ENE E ESE SE" },   //1800m
+        { hPa: 800, max: 18, dirs: "N NNE NE ENE E ESE SE SSE" },   //2000m
       ],
     },
     {
       id: "sjorge", nombre: "S.Jorge", lat: -31.318, lon: -64.350, techoMinHPa: 850,
       viento: [
-        { hPa: 950, max: 19, dirs: "E ESE SE" },
-        { hPa: 925, max: 20, dirs: "N NNE NE ENE E ESE SE SSE" },
-        { hPa: 900, max: 21, dirs: "N NNE NE ENE E ESE SE SSE S" },
-        { hPa: 850, max: 21, dirs: "N NNE NE ENE E ESE SE SSE S" },
+        { hPa: 950, max: 17, dirs: "E ESE SE" },                   //500m
+        { hPa: 925, max: 20, dirs: "NNE NE ENE E ESE SE SSE" }, //800m
+        { hPa: 900, max: 20, dirs: "N NNE NE ENE E ESE SE SSE S" }, //1000m
+        { hPa: 850, max: 20, dirs: "N NNE NE ENE E ESE SE SSE S" }, //1500m
       ],
     },
     {
       id: "ccorral", nombre: "C.Corral", lat: -30.966, lon: -64.586, techoMinHPa: 800,
       viento: [
-        { hPa: 900, max: 18, dirs: "NNO NO ONO O" },
-        { hPa: 850, max: 21, dirs: "NE NNE N NNO NO ONO O" },
-        { hPa: 800, max: 21, dirs: "ENE NE NNE N NNO NO ONO O" },
+        { hPa: 900, max: 17, dirs: "NNO NO ONO O" },           //1000m
+        { hPa: 850, max: 20, dirs: "NNE N NNO NO ONO O" },  //1500m
+        { hPa: 825, max: 20, dirs: "NE NNE N NNO NO ONO O OSO" },  //1800m      
+        { hPa: 800, max: 20, dirs: "ENE NE NNE N NNO NO ONO O OSO" }, //2000m
       ],
     },
   ],
