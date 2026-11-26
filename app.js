@@ -1113,13 +1113,13 @@
     const filas = dias.map((f) => {
       const d = infoDia(f);
       const chips = ordenados(f).map(({ L, a }) => a
-        ? `<span class="chip" style="--h:${hue(a.pct)}">${esc(L.nombre)} <b>${a.pct}</b></span>`
-        : `<span class="chip sd">${esc(L.nombre)} —</span>`).join("");
+        ? `<span class="chip" style="--h:${hue(a.pct)}" data-act="lugar" data-tab="${f}" data-l="${L.id}">${esc(L.nombre)} <b>${a.pct}</b></span>`
+        : `<span class="chip sd" data-act="lugar" data-tab="${f}" data-l="${L.id}">${esc(L.nombre)} —</span>`).join("");
       return `<li><button class="dia-fila" data-act="tab" data-tab="${f}">
         <span class="dia-n">${d.corto}<small>${d.sub}</small></span><span class="chips">${chips}</span></button></li>`;
     }).join("");
     return `<h2 class="tit">Próximos ${dias.length} días · ${C.horaRef} hs</h2>
-      <p class="nota">% de vuelo por lugar, de mayor a menor. Tocá un día para ver el detalle.</p>
+      <p class="nota">% de vuelo por lugar, de mayor a menor. Tocá un día o un lugar para ver el detalle.</p>
       <ol class="dias">${filas}</ol>`;
   }
 
@@ -1304,6 +1304,21 @@
       S.tab = b.dataset.tab;
       render();
       window.scrollTo({ top: 0 });
+    } else if (act === "lugar") {
+      // Desde el resumen: abre el día y baja hasta la tarjeta de ese lugar
+      S.tab = b.dataset.tab;
+      render();
+      const el = document.getElementById(`card-${b.dataset.l}`);
+      const top = document.querySelector(".top");
+      if (el) {
+        const y = el.getBoundingClientRect().top + window.scrollY - (top ? top.offsetHeight : 0) - 6;
+        window.scrollTo({ top: Math.max(0, y) });
+        el.classList.remove("resaltar");
+        void el.offsetWidth;
+        el.classList.add("resaltar");
+      } else {
+        window.scrollTo({ top: 0 });
+      }
     } else if (act === "hora" || act === "ampliar" || act === "plegar") {
       const k = act === "hora" ? `${b.dataset.l}|${b.dataset.f}` : b.dataset.k;
       if (act === "hora") { S.hora[k] = +b.dataset.h; S.ampliado[k] = true; }

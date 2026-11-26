@@ -233,3 +233,7 @@ main { padding: 8px; }
 .etq-15 { background: #d7ecf5; color: #0f5c6e; }
 .etq-resto { background: #fbe9c6; color: #7a4d00; }
 @media (prefers-color-scheme: dark) { .etq-15 { background: #123c48; color: #9fdcec; } .etq-resto { background: #4a3a17; color: #f5d796; } }
+/* Tarjeta elegida desde el resumen: destello breve */
+.chip[data-act="lugar"] { cursor: pointer; }
+@keyframes resaltar { 0%, 60% { box-shadow: 0 0 0 3px var(--acc); } 100% { box-shadow: 0 0 0 0 transparent; } }
+.card.resaltar { animation: resaltar 1.6s ease-out; }
