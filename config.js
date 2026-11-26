@@ -72,7 +72,7 @@ window.CONFIG = {
       id: "pedernera", nombre: "Pedernera", lat: -31.606, lon: -64.687, techoMinHPa: 800,
       viento: [
         { hPa: 850, max: 19, dirs: "ENE E ESE SE" },
-        { hPa: 800, max: 18, dirs: "NNE NE ENE E ESE SE SSE" },
+        { hPa: 800, max: 18, dirs: "NNE NE ENE E ESE SE" },
       ],
     },
     {
